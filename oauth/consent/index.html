@@ -21,6 +21,7 @@
   button { width: 100%; padding: 13px; border: 0; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; }
   .btn-primary { background: var(--verde); color: #fff; margin-bottom: 10px; }
   .btn-secondary { background: #e5e7eb; color: #374151; }
+  .btn-link { background: none; color: #6b7280; font-weight: 500; font-size: 13px; margin-top: 10px; text-decoration: underline; }
   .erro { background: #fee2e2; color: #b91c1c; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; display: none; }
   .loading { text-align: center; color: var(--cinza); padding: 24px 0; }
   .hidden { display: none; }
@@ -53,6 +54,7 @@
     </div>
     <button class="btn-primary" onclick="aprovar()">Permitir</button>
     <button class="btn-secondary" onclick="negar()">Negar</button>
+    <button class="btn-link" onclick="trocarConta()">Entrar com outra conta</button>
   </div>
 </div>
 
@@ -116,6 +118,14 @@ window.aprovar = async () => {
     if (error) throw error
     location.href = data.redirect_url || data.redirect_to
   } catch (e) { mostrarErro('Erro ao aprovar: ' + (e.message || e)) }
+}
+
+window.trocarConta = async () => {
+  limparErro()
+  await supabase.auth.signOut()
+  el('email').value = ''
+  el('senha').value = ''
+  mostrar('login')
 }
 
 window.negar = async () => {
