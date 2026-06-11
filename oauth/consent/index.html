@@ -34,6 +34,13 @@
   <div id="erro" class="erro"></div>
   <div id="loading" class="loading">Carregando…</div>
 
+  <div id="chooser" class="hidden">
+    <h2>Continuar conectado?</h2>
+    <div class="userinfo" id="chooserEmail"></div>
+    <button class="btn-primary" onclick="continuarConta()">Continuar</button>
+    <button class="btn-secondary" onclick="trocarConta()">Entrar com outra conta</button>
+  </div>
+
   <div id="login" class="hidden">
     <h2>Entre na sua conta HelpDol</h2>
     <input id="email" type="email" placeholder="Email" autocomplete="email">
@@ -65,7 +72,7 @@ const supabase = createClient('https://kcslltohicvlgunvuhbl.supabase.co', 'eyJhb
 const authorizationId = new URLSearchParams(location.search).get('authorization_id')
 
 const el = (id) => document.getElementById(id)
-const mostrar = (id) => { ['loading','login','consent'].forEach(x => el(x).classList.add('hidden')); el(id).classList.remove('hidden') }
+const mostrar = (id) => { ['loading','login','consent','chooser'].forEach(x => el(x).classList.add('hidden')); el(id).classList.remove('hidden') }
 const mostrarErro = (msg) => { el('erro').textContent = msg; el('erro').style.display = 'block' }
 const limparErro = () => { el('erro').style.display = 'none' }
 
@@ -77,7 +84,10 @@ async function iniciar() {
   }
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) { mostrar('login'); return }
-  await carregarConsent(session)
+  // Conta lembrada: perguntar antes (permite trocar de conta)
+  el('chooserEmail').textContent = session.user?.email || ''
+  window._sessaoAtual = session
+  mostrar('chooser')
 }
 
 async function carregarConsent(session) {
@@ -118,6 +128,12 @@ window.aprovar = async () => {
     if (error) throw error
     location.href = data.redirect_url || data.redirect_to
   } catch (e) { mostrarErro('Erro ao aprovar: ' + (e.message || e)) }
+}
+
+window.continuarConta = async () => {
+  limparErro()
+  mostrar('loading')
+  await carregarConsent(window._sessaoAtual)
 }
 
 window.trocarConta = async () => {
