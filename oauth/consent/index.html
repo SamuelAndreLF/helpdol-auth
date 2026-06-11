@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HelpDol — Autorizar acesso</title>
+<style>
+  :root { --verde: #1db954; --escuro: #16213e; --cinza: #6b7280; }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  body { background: linear-gradient(160deg, #16213e 0%, #0f3460 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .card { background: #fff; border-radius: 16px; padding: 32px 28px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+  .logo { font-size: 28px; font-weight: 800; color: var(--escuro); text-align: center; margin-bottom: 4px; }
+  .logo span { color: var(--verde); }
+  .sub { text-align: center; color: var(--cinza); font-size: 14px; margin-bottom: 24px; }
+  h2 { font-size: 18px; color: var(--escuro); margin-bottom: 12px; text-align: center; }
+  .scopes { background: #f3f4f6; border-radius: 10px; padding: 14px 16px; margin: 16px 0; font-size: 14px; color: #374151; }
+  .scopes li { margin: 6px 0 6px 18px; }
+  .userinfo { text-align: center; font-size: 13px; color: var(--cinza); margin-bottom: 16px; }
+  input { width: 100%; padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 15px; margin-bottom: 12px; }
+  input:focus { outline: 2px solid var(--verde); border-color: transparent; }
+  button { width: 100%; padding: 13px; border: 0; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .btn-primary { background: var(--verde); color: #fff; margin-bottom: 10px; }
+  .btn-secondary { background: #e5e7eb; color: #374151; }
+  .erro { background: #fee2e2; color: #b91c1c; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; display: none; }
+  .loading { text-align: center; color: var(--cinza); padding: 24px 0; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Help<span>Dol</span></div>
+  <div class="sub">Conectar com o ChatGPT</div>
+  <div id="erro" class="erro"></div>
+  <div id="loading" class="loading">Carregando…</div>
+
+  <div id="login" class="hidden">
+    <h2>Entre na sua conta HelpDol</h2>
+    <input id="email" type="email" placeholder="Email" autocomplete="email">
+    <input id="senha" type="password" placeholder="Senha" autocomplete="current-password">
+    <button class="btn-primary" onclick="fazerLogin()">Entrar</button>
+  </div>
+
+  <div id="consent" class="hidden">
+    <h2 id="titulo">Autorizar acesso?</h2>
+    <div class="userinfo" id="usuario"></div>
+    <div class="scopes">
+      <b id="clientName">O aplicativo</b> poderá:
+      <ul>
+        <li>Registrar entradas, despesas e pagamentos de colaboradores</li>
+        <li>Consultar seus resumos financeiros</li>
+        <li>Ver colaboradores e contas a pagar/receber</li>
+      </ul>
+    </div>
+    <button class="btn-primary" onclick="aprovar()">Permitir</button>
+    <button class="btn-secondary" onclick="negar()">Negar</button>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const supabase = createClient('https://kcslltohicvlgunvuhbl.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtjc2xsdG9oaWN2bGd1bnZ1aGJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3MDAzNzMsImV4cCI6MjA4MDI3NjM3M30.dFVFz-soXBvTvm8WttEpgtIc3PHgqi1ikqU0cTfUsDE')
+const authorizationId = new URLSearchParams(location.search).get('authorization_id')
+
+const el = (id) => document.getElementById(id)
+const mostrar = (id) => { ['loading','login','consent'].forEach(x => el(x).classList.add('hidden')); el(id).classList.remove('hidden') }
+const mostrarErro = (msg) => { el('erro').textContent = msg; el('erro').style.display = 'block' }
+const limparErro = () => { el('erro').style.display = 'none' }
+
+async function iniciar() {
+  if (!authorizationId) {
+    mostrarErro('Link inválido: falta authorization_id. Inicie a conexão pelo ChatGPT.')
+    el('loading').classList.add('hidden')
+    return
+  }
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) { mostrar('login'); return }
+  await carregarConsent(session)
+}
+
+async function carregarConsent(session) {
+  try {
+    const { data, error } = await supabase.auth.oauth.getAuthorizationDetails(authorizationId)
+    if (error) throw error
+    // Usuário já autorizou este app antes: o Supabase pula o consentimento
+    // e devolve direto a URL de retorno com o código
+    if (data?.redirect_url || data?.redirect_to) {
+      location.href = data.redirect_url || data.redirect_to
+      return
+    }
+    const nome = data?.client?.name || data?.client_name || 'ChatGPT'
+    el('clientName').textContent = nome
+    el('titulo').textContent = 'Autorizar ' + nome + '?'
+    el('usuario').textContent = 'Conectado como ' + (session.user?.email || '')
+    mostrar('consent')
+  } catch (e) {
+    mostrarErro('Não foi possível carregar a autorização: ' + (e.message || e))
+    el('loading').classList.add('hidden')
+  }
+}
+
+window.fazerLogin = async () => {
+  limparErro()
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: el('email').value.trim(),
+    password: el('senha').value,
+  })
+  if (error) { mostrarErro('Login falhou: ' + error.message); return }
+  await carregarConsent(data.session)
+}
+
+window.aprovar = async () => {
+  limparErro()
+  try {
+    const { data, error } = await supabase.auth.oauth.approveAuthorization(authorizationId)
+    if (error) throw error
+    location.href = data.redirect_url || data.redirect_to
+  } catch (e) { mostrarErro('Erro ao aprovar: ' + (e.message || e)) }
+}
+
+window.negar = async () => {
+  limparErro()
+  try {
+    const { data, error } = await supabase.auth.oauth.denyAuthorization(authorizationId)
+    if (error) throw error
+    location.href = data.redirect_url || data.redirect_to
+  } catch (e) { mostrarErro('Erro ao negar: ' + (e.message || e)) }
+}
+
+iniciar()
+</script>
+</body>
+</html>
