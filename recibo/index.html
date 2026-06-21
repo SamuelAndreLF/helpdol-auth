@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recibo — HelpDol</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; color: #16213e; padding: 24px 16px; }
+  .wrap { max-width: 480px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 18px; box-shadow: 0 8px 30px rgba(0,0,0,.08); overflow: hidden; }
+  .top { background: linear-gradient(135deg, #1DB954, #16a34a); color: #fff; padding: 22px 24px; }
+  .brand { font-size: 20px; font-weight: 800; letter-spacing: .3px; }
+  .brand span { opacity: .85; font-weight: 600; }
+  .title { font-size: 13px; opacity: .9; margin-top: 2px; }
+  .body { padding: 22px 24px; }
+  .valor { font-size: 34px; font-weight: 800; color: #16a34a; margin-bottom: 4px; }
+  .valor-label { font-size: 12px; color: #6b7280; margin-bottom: 18px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #f0f1f3; font-size: 15px; }
+  .row:last-child { border-bottom: none; }
+  .row .k { color: #6b7280; }
+  .row .v { font-weight: 600; text-align: right; }
+  .ok { margin-top: 18px; display: flex; align-items: center; gap: 8px; color: #16a34a; font-weight: 700; font-size: 14px; }
+  .foot { text-align: center; color: #9ca3af; font-size: 11px; padding: 14px; }
+  .btn { display: block; width: 100%; max-width: 480px; margin: 18px auto 0; padding: 15px; background: #16213e; color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .hint { text-align: center; color: #6b7280; font-size: 12px; margin-top: 10px; }
+  @media print { body { background: #fff; padding: 0; } .btn, .hint { display: none !important; } .card { box-shadow: none; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <div class="brand">Help<span>Dol</span></div>
+        <div class="title">Recibo de Pagamento</div>
+      </div>
+      <div class="body">
+        <div class="valor" id="valor">—</div>
+        <div class="valor-label">Valor pago</div>
+        <div class="row"><span class="k">Colaborador</span><span class="v" id="nome">—</span></div>
+        <div class="row"><span class="k">Serviço</span><span class="v" id="servico">—</span></div>
+        <div class="row"><span class="k">Data</span><span class="v" id="data">—</span></div>
+        <div class="ok">✅ Pagamento confirmado</div>
+      </div>
+      <div class="foot">Gerado pelo HelpDol</div>
+    </div>
+    <button class="btn" onclick="window.print()">Salvar PDF / Imprimir</button>
+    <div class="hint">No celular: toque em "Salvar PDF / Imprimir" → Compartilhar → Salvar em Arquivos (PDF).</div>
+  </div>
+<script>
+  function esc(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+  var p = new URLSearchParams(location.search);
+  var simbolos = { USD:'US$', BRL:'R$', EUR:'€', GBP:'£', ARS:'AR$' };
+  var moeda = (p.get('moeda')||'USD').toUpperCase();
+  var sym = simbolos[moeda] || (moeda + ' ');
+  var valor = parseFloat(p.get('valor')||'0') || 0;
+  function fmtData(d){
+    if(!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)){ var t=new Date(); d=t.toISOString().slice(0,10); }
+    var x=d.split('-'); return x[2]+'/'+x[1]+'/'+x[0];
+  }
+  document.getElementById('valor').textContent = sym + ' ' + valor.toFixed(2);
+  document.getElementById('nome').innerHTML = esc(p.get('nome') || 'Colaborador');
+  document.getElementById('servico').innerHTML = esc(p.get('servico') || 'Serviço');
+  document.getElementById('data').textContent = fmtData(p.get('data'));
+</script>
+</body>
+</html>
