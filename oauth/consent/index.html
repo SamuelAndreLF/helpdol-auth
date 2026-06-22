@@ -21,8 +21,15 @@
   button { width: 100%; padding: 13px; border: 0; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; }
   .btn-primary { background: var(--verde); color: #fff; margin-bottom: 10px; }
   .btn-secondary { background: #e5e7eb; color: #374151; }
-  .btn-link { background: none; color: #6b7280; font-weight: 500; font-size: 13px; margin-top: 10px; text-decoration: underline; }
+  .btn-apple { background: #000; color: #fff; margin-bottom: 10px; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .btn-google { background: #fff; color: #3c4043; border: 1px solid #dadce0; margin-bottom: 10px; display:flex; align-items:center; justify-content:center; gap:10px; }
+  .btn-google .g { font-weight:800; font-family: arial, sans-serif; }
+  .btn-link { background: none; color: #2563eb; font-weight: 600; font-size: 14px; margin-top: 6px; text-decoration: underline; }
+  .divisor { display:flex; align-items:center; text-align:center; color:#9ca3af; font-size:12px; margin: 6px 0 14px; }
+  .divisor::before, .divisor::after { content:''; flex:1; border-bottom:1px solid #e5e7eb; }
+  .divisor:not(:empty)::before { margin-right:.6em; } .divisor:not(:empty)::after { margin-left:.6em; }
   .erro { background: #fee2e2; color: #b91c1c; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; display: none; }
+  .info { background: #dbeafe; color: #1e40af; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; display: none; }
   .loading { text-align: center; color: var(--cinza); padding: 24px 0; }
   .hidden { display: none; }
 </style>
@@ -32,6 +39,7 @@
   <div class="logo">Help<span>Dol</span></div>
   <div class="sub">Conectar com o ChatGPT</div>
   <div id="erro" class="erro"></div>
+  <div id="info" class="info"></div>
   <div id="loading" class="loading">Carregando…</div>
 
   <div id="chooser" class="hidden">
@@ -43,9 +51,28 @@
 
   <div id="login" class="hidden">
     <h2>Entre na sua conta HelpDol</h2>
+    <button class="btn-apple" onclick="entrarApple()"><span></span> Entrar com a Apple</button>
+    <button class="btn-google" onclick="entrarGoogle()"><span class="g" style="color:#4285F4">G</span> Continuar com Google</button>
+    <div class="divisor">ou</div>
     <input id="email" type="email" placeholder="Email" autocomplete="email">
     <input id="senha" type="password" placeholder="Senha" autocomplete="current-password">
     <button class="btn-primary" onclick="fazerLogin()">Entrar</button>
+    <div style="text-align:center"><button class="btn-link" onclick="mostrarOtp()">Entrar com código por e-mail (sem senha)</button></div>
+  </div>
+
+  <div id="otp" class="hidden">
+    <h2>Entrar com código</h2>
+    <div id="otpStep1">
+      <p style="font-size:13px;color:#6b7280;margin-bottom:12px;text-align:center">Enviaremos um código de 6 dígitos para o seu e-mail.</p>
+      <input id="otpEmail" type="email" placeholder="Seu e-mail" autocomplete="email">
+      <button class="btn-primary" onclick="enviarCodigo()">Enviar código</button>
+    </div>
+    <div id="otpStep2" class="hidden">
+      <p id="otpMsg" style="font-size:13px;color:#6b7280;margin-bottom:12px;text-align:center"></p>
+      <input id="otpCode" type="text" inputmode="numeric" placeholder="Código de 6 dígitos" autocomplete="one-time-code">
+      <button class="btn-primary" onclick="confirmarCodigo()">Confirmar</button>
+    </div>
+    <div style="text-align:center"><button class="btn-link" onclick="voltarLogin()">Voltar</button></div>
   </div>
 
   <div id="consent" class="hidden">
@@ -72,9 +99,15 @@ const supabase = createClient('https://kcslltohicvlgunvuhbl.supabase.co', 'eyJhb
 const authorizationId = new URLSearchParams(location.search).get('authorization_id')
 
 const el = (id) => document.getElementById(id)
-const mostrar = (id) => { ['loading','login','consent','chooser'].forEach(x => el(x).classList.add('hidden')); el(id).classList.remove('hidden') }
+const mostrar = (id) => { ['loading','login','consent','chooser','otp'].forEach(x => el(x).classList.add('hidden')); el(id).classList.remove('hidden') }
 const mostrarErro = (msg) => { el('erro').textContent = msg; el('erro').style.display = 'block' }
 const limparErro = () => { el('erro').style.display = 'none' }
+const mostrarInfo = (msg) => { el('info').textContent = msg; el('info').style.display = 'block' }
+
+// URL de retorno (preserva o authorization_id) para os logins sociais
+function redirectVolta() {
+  return location.origin + location.pathname + '?authorization_id=' + encodeURIComponent(authorizationId || '')
+}
 
 async function iniciar() {
   if (!authorizationId) {
@@ -84,7 +117,6 @@ async function iniciar() {
   }
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) { mostrar('login'); return }
-  // Conta lembrada: perguntar antes (permite trocar de conta)
   el('chooserEmail').textContent = session.user?.email || ''
   window._sessaoAtual = session
   mostrar('chooser')
@@ -94,8 +126,6 @@ async function carregarConsent(session) {
   try {
     const { data, error } = await supabase.auth.oauth.getAuthorizationDetails(authorizationId)
     if (error) throw error
-    // Usuário já autorizou este app antes: o Supabase pula o consentimento
-    // e devolve direto a URL de retorno com o código
     if (data?.redirect_url || data?.redirect_to) {
       location.href = data.redirect_url || data.redirect_to
       return
@@ -111,6 +141,17 @@ async function carregarConsent(session) {
   }
 }
 
+window.entrarApple = async () => {
+  limparErro()
+  const { error } = await supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: redirectVolta() } })
+  if (error) mostrarErro('Não foi possível entrar com a Apple: ' + error.message)
+}
+window.entrarGoogle = async () => {
+  limparErro()
+  const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectVolta() } })
+  if (error) mostrarErro('Não foi possível entrar com o Google: ' + error.message)
+}
+
 window.fazerLogin = async () => {
   limparErro()
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -118,6 +159,30 @@ window.fazerLogin = async () => {
     password: el('senha').value,
   })
   if (error) { mostrarErro('Login falhou: ' + error.message); return }
+  await carregarConsent(data.session)
+}
+
+window.mostrarOtp = () => { limparErro(); el('otpStep1').classList.remove('hidden'); el('otpStep2').classList.add('hidden'); mostrar('otp') }
+window.voltarLogin = () => { limparErro(); mostrar('login') }
+
+window.enviarCodigo = async () => {
+  limparErro()
+  const email = el('otpEmail').value.trim()
+  if (!email) { mostrarErro('Digite seu e-mail.'); return }
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: redirectVolta() } })
+  if (error) { mostrarErro('Não foi possível enviar o código: ' + error.message); return }
+  window._otpEmail = email
+  el('otpMsg').textContent = 'Enviamos um código para ' + email + '. Veja seu e-mail e digite abaixo.'
+  el('otpStep1').classList.add('hidden')
+  el('otpStep2').classList.remove('hidden')
+}
+
+window.confirmarCodigo = async () => {
+  limparErro()
+  const token = el('otpCode').value.trim()
+  if (!token) { mostrarErro('Digite o código do e-mail.'); return }
+  const { data, error } = await supabase.auth.verifyOtp({ email: window._otpEmail, token, type: 'email' })
+  if (error) { mostrarErro('Código inválido ou expirado: ' + error.message); return }
   await carregarConsent(data.session)
 }
 
