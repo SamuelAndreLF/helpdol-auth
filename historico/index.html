@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Histórico — HelpDol</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; color: #16213e; padding: 24px 16px; }
+  .wrap { max-width: 820px; margin: 0 auto; }
+  .top { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; padding: 20px 22px; border-radius: 16px; }
+  .brand { font-size: 20px; font-weight: 800; }
+  .brand span { opacity: .85; font-weight: 600; }
+  .title { font-size: 13px; opacity: .9; margin-top: 2px; }
+  .meta { font-size: 13px; opacity: .92; margin-top: 8px; line-height: 1.5; }
+  .meta b { font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 14px; overflow: hidden; margin-top: 16px; box-shadow: 0 4px 16px rgba(0,0,0,.06); font-size: 13px; }
+  th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid #f0f1f3; }
+  th { background: #f8fafc; color: #475569; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  td.v { text-align: right; font-weight: 700; white-space: nowrap; }
+  .pos { color: #16a34a; } .neg { color: #dc2626; }
+  .tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px; }
+  .tag.entrada { background:#dcfce7; color:#166534; } .tag.despesa { background:#fee2e2; color:#991b1b; } .tag.colaborador { background:#fef3c7; color:#92400e; }
+  tr.tot td { font-weight: 800; font-size: 14px; background: #f8fafc; border-top: 2px solid #16213e; }
+  .empty { background:#fff; border-radius:14px; padding:30px; text-align:center; color:#6b7280; margin-top:16px; }
+  .foot { text-align: center; color: #9ca3af; font-size: 11px; padding: 16px 0 4px; }
+  .btn { display: block; width: 100%; max-width: 820px; margin: 12px auto 0; padding: 14px; background: #16213e; color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .btn-share { background: #1DB954; margin-top: 18px; } .btn-csv { background: #0f766e; }
+  .hint { text-align: center; color: #6b7280; font-size: 12px; margin-top: 10px; }
+  @media print { body { background:#fff; padding:0; } .btn, .hint { display:none !important; } table, .top { box-shadow:none; } }
+</style>
+</head>
+<body>
+  <div class="wrap" id="wrap">
+    <div class="top">
+      <div class="brand">Help<span>Dol</span></div>
+      <div class="title">Histórico de Lançamentos</div>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div id="tabela"></div>
+    <div class="empty" id="empty" style="display:none">Nenhum lançamento no período.</div>
+    <div class="foot">Gerado pelo HelpDol · Histórico completo de apoio à contabilidade.</div>
+  </div>
+  <button class="btn btn-share" onclick="helpdolCompartilhar()">📲 Compartilhar (WhatsApp, e-mail, SMS…)</button>
+  <button class="btn btn-csv" onclick="baixarCSV()">📊 Baixar planilha (CSV)</button>
+  <button class="btn" onclick="window.print()">Salvar PDF / Imprimir</button>
+  <div class="hint">CSV abre no Excel/Planilhas. "Compartilhar" envia pro contador.</div>
+<script>
+  var simbolos = { USD:'US$', BRL:'R$', EUR:'€', GBP:'£', ARS:'AR$' };
+  function esc(s){ var d=document.createElement('div'); d.textContent=(s==null?'':String(s)); return d.innerHTML; }
+  function fmtData(d){ if(!d||!/^\d{4}-\d{2}-\d{2}$/.test(d)) return d||''; var x=d.split('-'); return x[2]+'/'+x[1]+'/'+x[0]; }
+
+  var dados = { moeda:'USD', itens:[] };
+  try {
+    var raw = new URLSearchParams(location.search).get('d') || '';
+    raw = raw.replace(/-/g,'+').replace(/_/g,'/');
+    dados = JSON.parse(decodeURIComponent(escape(atob(raw))));
+  } catch(e) { dados = { moeda:'USD', itens:[] }; }
+
+  var moeda = (dados.moeda||'USD').toUpperCase();
+  var sym = simbolos[moeda] || (moeda+' ');
+  function f(x){ return sym+' '+(parseFloat(x||0)||0).toFixed(2); }
+  var itens = dados.itens || [];
+  var rotuloTipo = { entrada:'Entrada', despesa:'Despesa', colaborador:'Colaborador' };
+
+  var inc=0, out=0;
+  itens.forEach(function(i){ if(i.ty==='entrada') inc+=(+i.v||0); else out+=(+i.v||0); });
+  var periodo = '';
+  if(dados.inicio) periodo = 'Período: <b>'+fmtData(dados.inicio)+'</b> a <b>'+(dados.fim?fmtData(dados.fim):'hoje')+'</b><br>';
+  document.getElementById('meta').innerHTML = periodo +
+    itens.length+' lançamentos · Entradas <b>'+f(inc)+'</b> · Saídas <b>'+f(out)+'</b> · Saldo <b>'+f(inc-out)+'</b>';
+
+  if(!itens.length){ document.getElementById('empty').style.display='block'; }
+  else {
+    var h = '<table><thead><tr><th>Data</th><th>Tipo</th><th>Nome</th><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th></tr></thead><tbody>';
+    itens.forEach(function(i){
+      var ent = i.ty==='entrada';
+      h += '<tr>'
+        + '<td>'+esc(fmtData(i.dt))+'</td>'
+        + '<td><span class="tag '+esc(i.ty)+'">'+esc(rotuloTipo[i.ty]||i.ty)+'</span></td>'
+        + '<td>'+esc(i.n||'—')+'</td>'
+        + '<td>'+esc(i.de||'—')+'</td>'
+        + '<td>'+esc(i.c||'—')+'</td>'
+        + '<td class="v '+(ent?'pos':'neg')+'">'+(ent?'+ ':'− ')+f(i.v)+'</td>'
+        + '</tr>';
+    });
+    h += '<tr class="tot"><td colspan="5">SALDO DO PERÍODO</td><td class="v '+((inc-out)>=0?'pos':'neg')+'">'+f(inc-out)+'</td></tr>';
+    h += '</tbody></table>';
+    document.getElementById('tabela').innerHTML = h;
+  }
+
+  function baixarCSV(){
+    var linhas = [['Data','Tipo','Nome','Descricao','Categoria','Valor ('+moeda+')']];
+    itens.forEach(function(i){
+      var v = (i.ty==='entrada'?1:-1)*(+i.v||0);
+      linhas.push([fmtData(i.dt), rotuloTipo[i.ty]||i.ty, i.n||'', i.de||'', i.c||'', v.toFixed(2)]);
+    });
+    var csv = linhas.map(function(r){ return r.map(function(c){ var s=String(c==null?'':c); return '"'+s.replace(/"/g,'""')+'"'; }).join(','); }).join('\r\n');
+    var blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'historico-helpdol.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+  window.baixarCSV = baixarCSV;
+  window.HELPDOL_PDF_TARGET = '.wrap';
+  window.HELPDOL_PDF_NAME = 'historico-helpdol.pdf';
+  window.HELPDOL_SHARE_TEXT = 'Histórico HelpDol';
+</script>
+<script src="../share.js"></script>
+</body>
+</html>
