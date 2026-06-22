@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notas Fiscais — HelpDol</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; color: #16213e; padding: 24px 16px; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  .top { background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; padding: 22px 24px; border-radius: 18px; box-shadow: 0 8px 30px rgba(0,0,0,.08); }
+  .brand { font-size: 20px; font-weight: 800; }
+  .brand span { opacity: .85; font-weight: 600; }
+  .title { font-size: 13px; opacity: .9; margin-top: 2px; }
+  .ano { font-size: 30px; font-weight: 800; margin-top: 6px; }
+  .meta { font-size: 13px; opacity: .92; margin-top: 6px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 18px; }
+  .card { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,.07); break-inside: avoid; }
+  .card img { width: 100%; height: 200px; object-fit: cover; background: #e5e7eb; display: block; }
+  .info { padding: 10px 12px; }
+  .info .d { font-size: 12px; color: #6b7280; }
+  .info .n { font-size: 14px; font-weight: 600; margin-top: 2px; word-break: break-word; }
+  .info .v { font-size: 15px; font-weight: 800; margin-top: 4px; }
+  .v.entrada { color: #16a34a; }
+  .v.despesa { color: #dc2626; }
+  .tag { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; padding: 2px 7px; border-radius: 999px; margin-top: 6px; }
+  .tag.entrada { background: #dcfce7; color: #166534; }
+  .tag.despesa { background: #fee2e2; color: #991b1b; }
+  .empty { background:#fff; border-radius:14px; padding:30px; text-align:center; color:#6b7280; margin-top:18px; }
+  .foot { text-align: center; color: #9ca3af; font-size: 11px; padding: 18px 0 4px; line-height: 1.5; }
+  .btn { display: block; width: 100%; max-width: 760px; margin: 18px auto 0; padding: 15px; background: #16213e; color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .hint { text-align: center; color: #6b7280; font-size: 12px; margin-top: 10px; }
+  @media print { body { background: #fff; padding: 0; } .btn, .hint { display: none !important; } .card { box-shadow: none; border: 1px solid #e5e7eb; } .top { box-shadow: none; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">Help<span>Dol</span></div>
+      <div class="title">Notas Fiscais — Comprovantes</div>
+      <div class="ano" id="ano">—</div>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" style="display:none">Nenhuma nota fiscal encontrada.</div>
+    <div class="foot">Gerado pelo HelpDol · Comprovantes fotografados pelo usuário. Confira sempre com o seu contabilista.</div>
+  </div>
+  <button class="btn" onclick="window.print()">Salvar PDF / Imprimir</button>
+  <div class="hint">No celular: toque em "Salvar PDF / Imprimir" → Compartilhar → Salvar em Arquivos (PDF).</div>
+<script>
+  var p = new URLSearchParams(location.search);
+  var simbolos = { USD:'US$', BRL:'R$', EUR:'€', GBP:'£', ARS:'AR$' };
+  var moeda = (p.get('moeda')||'USD').toUpperCase();
+  var sym = simbolos[moeda] || (moeda + ' ');
+  function f(x){ return sym + ' ' + (parseFloat(x||'0')||0).toFixed(2); }
+  function esc(s){ var d=document.createElement('div'); d.textContent=(s==null?'':String(s)); return d.innerHTML; }
+
+  document.getElementById('ano').textContent = p.get('ano') || new Date().getFullYear();
+
+  var notas = [];
+  try {
+    var raw = p.get('d');
+    if (raw) notas = JSON.parse(decodeURIComponent(escape(atob(raw))));
+  } catch (e) { notas = []; }
+
+  var total = notas.reduce(function(s,n){ return s + (parseFloat(n.v)||0); }, 0);
+  document.getElementById('meta').textContent = notas.length + (notas.length === 1 ? ' nota' : ' notas') + ' · total ' + f(total);
+
+  var grid = document.getElementById('grid');
+  if (!notas.length) {
+    document.getElementById('empty').style.display = 'block';
+  } else {
+    notas.forEach(function(n){
+      var tipo = n.t === 'entrada' ? 'entrada' : 'despesa';
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML =
+        '<a href="' + esc(n.u) + '" target="_blank" rel="noopener"><img src="' + esc(n.u) + '" alt="nota" loading="lazy"></a>' +
+        '<div class="info">' +
+          '<div class="d">' + esc(n.d || '') + '</div>' +
+          '<div class="n">' + esc(n.n || (tipo === 'entrada' ? 'Entrada' : 'Despesa')) + '</div>' +
+          '<div class="v ' + tipo + '">' + f(n.v) + '</div>' +
+          '<span class="tag ' + tipo + '">' + (tipo === 'entrada' ? 'Entrada' : 'Despesa') + '</span>' +
+        '</div>';
+      grid.appendChild(card);
+    });
+  }
+</script>
+</body>
+</html>
