@@ -22,7 +22,8 @@
   .row .v { font-weight: 600; text-align: right; }
   .ok { margin-top: 18px; display: flex; align-items: center; gap: 8px; color: #16a34a; font-weight: 700; font-size: 14px; }
   .foot { text-align: center; color: #9ca3af; font-size: 11px; padding: 14px; }
-  .btn { display: block; width: 100%; max-width: 480px; margin: 18px auto 0; padding: 15px; background: #16213e; color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .btn { display: block; width: 100%; max-width: 480px; margin: 14px auto 0; padding: 15px; background: #16213e; color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .btn-share { background: #1DB954; margin-top: 18px; }
   .hint { text-align: center; color: #6b7280; font-size: 12px; margin-top: 10px; }
   @media print { body { background: #fff; padding: 0; } .btn, .hint { display: none !important; } .card { box-shadow: none; } }
 </style>
@@ -44,8 +45,9 @@
       </div>
       <div class="foot">Gerado pelo HelpDol</div>
     </div>
+    <button class="btn btn-share" onclick="helpdolCompartilhar()">📲 Compartilhar (WhatsApp, e-mail, SMS…)</button>
     <button class="btn" onclick="window.print()">Salvar PDF / Imprimir</button>
-    <div class="hint">No celular: toque em "Salvar PDF / Imprimir" → Compartilhar → Salvar em Arquivos (PDF).</div>
+    <div class="hint">"Compartilhar" abre o menu do celular pra enviar. "Salvar PDF" gera o arquivo.</div>
   </div>
 <script>
   function esc(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
@@ -62,6 +64,10 @@
   document.getElementById('nome').innerHTML = esc(p.get('nome') || 'Colaborador');
   document.getElementById('servico').innerHTML = esc(p.get('servico') || 'Serviço');
   document.getElementById('data').textContent = fmtData(p.get('data'));
+  window.HELPDOL_PDF_TARGET = '.card';
+  window.HELPDOL_PDF_NAME = 'recibo-helpdol.pdf';
+  window.HELPDOL_SHARE_TEXT = 'Recibo HelpDol';
 </script>
+<script src="../share.js"></script>
 </body>
 </html>

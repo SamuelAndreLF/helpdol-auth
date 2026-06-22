@@ -28,7 +28,8 @@
   .tag.despesa { background: #fee2e2; color: #991b1b; }
   .empty { background:#fff; border-radius:14px; padding:30px; text-align:center; color:#6b7280; margin-top:18px; }
   .foot { text-align: center; color: #9ca3af; font-size: 11px; padding: 18px 0 4px; line-height: 1.5; }
-  .btn { display: block; width: 100%; max-width: 760px; margin: 18px auto 0; padding: 15px; background: #16213e; color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .btn { display: block; width: 100%; max-width: 760px; margin: 14px auto 0; padding: 15px; background: #16213e; color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .btn-share { background: #1DB954; margin-top: 18px; }
   .hint { text-align: center; color: #6b7280; font-size: 12px; margin-top: 10px; }
   @media print { body { background: #fff; padding: 0; } .btn, .hint { display: none !important; } .card { box-shadow: none; border: 1px solid #e5e7eb; } .top { box-shadow: none; } }
 </style>
@@ -45,8 +46,9 @@
     <div class="empty" id="empty" style="display:none">Nenhuma nota fiscal encontrada.</div>
     <div class="foot">Gerado pelo HelpDol · Comprovantes fotografados pelo usuário. Confira sempre com o seu contabilista.</div>
   </div>
+  <button class="btn btn-share" onclick="helpdolCompartilhar()">📲 Compartilhar (WhatsApp, e-mail, SMS…)</button>
   <button class="btn" onclick="window.print()">Salvar PDF / Imprimir</button>
-  <div class="hint">No celular: toque em "Salvar PDF / Imprimir" → Compartilhar → Salvar em Arquivos (PDF).</div>
+  <div class="hint">"Compartilhar" abre o menu do celular pra enviar. "Salvar PDF" gera o arquivo.</div>
 <script>
   var p = new URLSearchParams(location.search);
   var simbolos = { USD:'US$', BRL:'R$', EUR:'€', GBP:'£', ARS:'AR$' };
@@ -85,6 +87,10 @@
       grid.appendChild(card);
     });
   }
+  window.HELPDOL_PDF_TARGET = '.wrap';
+  window.HELPDOL_PDF_NAME = 'notas-fiscais-helpdol.pdf';
+  window.HELPDOL_SHARE_TEXT = 'Notas fiscais HelpDol';
 </script>
+<script src="../share.js"></script>
 </body>
 </html>
