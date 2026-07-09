@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Conectar banco • HelpDol</title>
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:#0f1115; color:#f4f4f5; display:flex; min-height:100vh; align-items:center; justify-content:center; padding:24px; }
+  .card { width:100%; max-width:420px; background:#181b22; border:1px solid #262a33; border-radius:20px; padding:32px 24px; text-align:center; }
+  .logo { width:64px; height:64px; border-radius:16px; margin:0 auto 18px;
+    background:linear-gradient(135deg,#c9a227,#f2d675); display:flex; align-items:center; justify-content:center; font-size:30px; }
+  h1 { font-size:20px; margin:0 0 8px; }
+  p { color:#a1a1aa; font-size:15px; line-height:1.5; margin:0 0 24px; }
+  button { width:100%; border:0; border-radius:14px; padding:16px; font-size:16px; font-weight:600; cursor:pointer;
+    background:linear-gradient(135deg,#c9a227,#f2d675); color:#111; }
+  button:disabled { opacity:.6; }
+  .sec { background:#22c55e !important; color:#052e16 !important; }
+  .err { color:#f87171; font-size:14px; margin-top:16px; }
+  .muted { font-size:13px; color:#71717a; margin-top:18px; }
+  .spin { display:inline-block; width:18px; height:18px; border:3px solid rgba(0,0,0,.25); border-top-color:#111; border-radius:50%; animation:s .8s linear infinite; vertical-align:-3px; margin-right:8px; }
+  @keyframes s { to { transform:rotate(360deg); } }
+  .hide { display:none; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🏦</div>
+    <h1 id="ttl">Conectar seu banco</h1>
+    <p id="sub">Você será conectado com segurança pelo Stripe. O HelpDol só recebe suas transações — nunca sua senha do banco.</p>
+    <button id="go" onclick="start()">Escolher meu banco</button>
+    <div id="err" class="err hide"></div>
+    <div class="muted">🔒 Conexão criptografada via Stripe</div>
+  </div>
+<script>
+  var q = new URLSearchParams(location.search);
+  var pk = q.get('pk') || '';
+  var cs = q.get('cs') || '';
+  var sessionId = q.get('session') || '';
+  var stripe = pk ? Stripe(pk) : null;
+
+  function showErr(m){ var e=document.getElementById('err'); e.textContent=m; e.classList.remove('hide'); }
+
+  function backToApp(){
+    // Volta pro app; o app conclui a conexão (chama o -link) sozinho.
+    window.location.href = 'logify://bank-connected?session=' + encodeURIComponent(sessionId);
+  }
+
+  function done(){
+    document.getElementById('ttl').textContent = 'Banco conectado! ✅';
+    document.getElementById('sub').textContent = 'Suas transações serão importadas automaticamente. Voltando para o HelpDol...';
+    var b = document.getElementById('go');
+    b.className = 'sec';
+    b.disabled = false;
+    b.textContent = 'Voltar para o HelpDol';
+    b.onclick = backToApp;
+    setTimeout(backToApp, 1200);
+  }
+
+  function start(){
+    if(!stripe){ showErr('Configuração do Stripe ausente (chave publicável).'); return; }
+    if(!cs){ showErr('Sessão inválida. Volte ao app e tente de novo.'); return; }
+    var b = document.getElementById('go');
+    b.disabled = true;
+    b.innerHTML = '<span class="spin"></span>Abrindo bancos...';
+    stripe.collectFinancialConnectionsAccounts({ clientSecret: cs }).then(function(res){
+      if(res.error){
+        b.disabled=false; b.textContent='Tentar de novo';
+        showErr(res.error.message || 'Não foi possível conectar. Tente de novo.');
+        return;
+      }
+      var s = res.financialConnectionsSession;
+      if(s && s.accounts && s.accounts.length){ done(); }
+      else {
+        b.disabled=false; b.textContent='Escolher meu banco';
+        showErr('Nenhuma conta foi selecionada.');
+      }
+    }).catch(function(e){
+      b.disabled=false; b.textContent='Tentar de novo';
+      showErr(String(e && e.message ? e.message : e));
+    });
+  }
+</script>
+</body>
+</html>
