@@ -5,35 +5,100 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HelpDol — Política de Privacidade</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 720px; margin: 0 auto; padding: 32px 20px; color: #1f2937; line-height: 1.6; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; color: #1f2937; line-height: 1.6; }
   h1 { color: #16213e; } h1 span { color: #1db954; }
   h2 { color: #16213e; font-size: 18px; margin-top: 28px; }
   .data { color: #6b7280; font-size: 13px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #f3f4f6; color: #16213e; }
+  ul { padding-left: 20px; }
+  a { color: #1db954; }
+  .foot { margin-top: 40px; color: #9ca3af; font-size: 13px; }
 </style>
 </head>
 <body>
 <h1>Help<span>Dol</span> — Política de Privacidade</h1>
-<p class="data">Última atualização: 11 de junho de 2026</p>
+<p class="data">Última atualização: 17 de julho de 2026</p>
 
-<h2>1. Quem somos</h2>
-<p>O HelpDol é um aplicativo de gestão financeira para motoristas e trabalhadores autônomos. Esta política cobre o aplicativo HelpDol e a integração do HelpDol com o ChatGPT (ChatGPT App).</p>
+<p>O HelpDol é um aplicativo de gestão financeira para motoristas, autônomos e pequenos negócios. Esta política explica quais dados coletamos, para quê os usamos, com quem os compartilhamos, por quanto tempo os guardamos e como você pode controlá-los. Ela cobre <strong>o aplicativo HelpDol</strong>, a <strong>integração com o ChatGPT (ChatGPT App)</strong> e a <strong>conexão bancária</strong>.</p>
+
+<h2>1. Quem é o responsável</h2>
+<p>O HelpDol é o responsável pelo tratamento dos seus dados. Para qualquer assunto de privacidade, exportação ou exclusão de dados, entre em contato: <a href="mailto:helpdolsuport@gmail.com">helpdolsuport@gmail.com</a>.</p>
 
 <h2>2. Dados que coletamos</h2>
-<p>Coletamos os dados que você registra no HelpDol: entradas (recebimentos), despesas, pagamentos a colaboradores, transações agendadas e imagens de recibos que você enviar; além do seu e-mail de cadastro e dados de assinatura (plano).</p>
+<table>
+  <tr><th>Categoria</th><th>O que é</th></tr>
+  <tr><td>Cadastro</td><td>E-mail e dados de autenticação da sua conta.</td></tr>
+  <tr><td>Assinatura</td><td>Plano contratado e status da assinatura (básico, pro, premium).</td></tr>
+  <tr><td>Registros financeiros</td><td>Entradas (recebimentos), despesas, pagamentos a colaboradores, transações agendadas, metas e categorias que você cria no app ou pelo ChatGPT.</td></tr>
+  <tr><td>Imagens de recibos</td><td>Fotos de recibos/notas que você envia para leitura automática (OCR).</td></tr>
+  <tr><td>Comandos de voz</td><td>Áudio que você grava para lançar por voz, convertido em texto.</td></tr>
+  <tr><td>Transações bancárias</td><td>Ao conectar seu banco, importamos <strong>somente o histórico de transações</strong> (valor, data, descrição e estabelecimento). <strong>Nunca vemos nem armazenamos sua senha ou credenciais do banco</strong> — o login no banco é feito pela Stripe. A conexão é somente-leitura; o HelpDol não movimenta dinheiro.</td></tr>
+  <tr><td>Telefone (opcional)</td><td>Se você usar o HelpDol pelo WhatsApp/SMS, guardamos o número para vincular as mensagens à sua conta.</td></tr>
+  <tr><td>Logs de auditoria</td><td>Registro das ações executadas (inclusive via ChatGPT) para segurança e histórico.</td></tr>
+</table>
 
-<h2>3. Integração com o ChatGPT</h2>
-<p>Ao conectar sua conta HelpDol ao ChatGPT, você autoriza explicitamente o ChatGPT a registrar e consultar seus dados financeiros no HelpDol em seu nome. A autorização usa o padrão OAuth 2.1 e pode ser revogada a qualquer momento nas configurações do ChatGPT ou do HelpDol. O conteúdo das suas conversas com o ChatGPT é tratado pela OpenAI conforme a política de privacidade da OpenAI; o HelpDol recebe apenas os comandos necessários para executar as ações solicitadas (por exemplo, valor e descrição de uma despesa).</p>
+<h2>3. Para que usamos os dados (finalidades)</h2>
+<ul>
+  <li>Exibir seu histórico, saldos, resumos e projeções financeiras.</li>
+  <li>Executar as ações que você pede (lançar entrada/despesa, gerar recibo, gerar relatório, agendar pagamento).</li>
+  <li>Importar e conciliar automaticamente as transações do banco que você conectou.</li>
+  <li>Gerar respostas e insights do assistente de IA (no app e no ChatGPT).</li>
+  <li>Controlar sua assinatura e liberar os recursos do plano.</li>
+  <li>Garantir segurança, prevenir fraude e manter registro de auditoria.</li>
+</ul>
+<p>Não usamos seus dados financeiros para publicidade e <strong>não vendemos seus dados</strong>.</p>
 
-<h2>4. Como usamos os dados</h2>
-<p>Usamos seus dados exclusivamente para operar o serviço: exibir seu histórico e resumos, gerar relatórios e executar as ações que você solicitar. Toda ação executada via ChatGPT é registrada em log de auditoria (ação, data/hora e status) para sua segurança.</p>
+<h2>4. Integração com o ChatGPT — o que entra e o que sai</h2>
+<p>Quando você conecta sua conta HelpDol ao ChatGPT (autorização via OAuth 2.1, que pode ser revogada a qualquer momento), o ChatGPT passa a poder chamar as ferramentas do HelpDol em seu nome. Abaixo, o que cada tipo de ferramenta <strong>recebe</strong> e <strong>devolve</strong>:</p>
+<table>
+  <tr><th>Ferramenta</th><th>Entra (input)</th><th>Sai (output)</th></tr>
+  <tr><td>Registrar entrada / despesa / pagamento a colaborador</td><td>Valor, descrição, categoria, data e moeda que você informa.</td><td>Confirmação do lançamento criado.</td></tr>
+  <tr><td>Consultar resumo financeiro / tendência</td><td>Período solicitado.</td><td>Totais de receitas, despesas, saldo e projeção.</td></tr>
+  <tr><td>Listar / detalhar / classificar transações</td><td>Período, id da transação, classificação escolhida.</td><td>Lista de lançamentos (do app e do banco), com valor, data, descrição e origem.</td></tr>
+  <tr><td>Gerar recibo / relatório / histórico para contador</td><td>Período ou lançamento.</td><td>Documento ou link com o resumo/histórico do período.</td></tr>
+  <tr><td>Consultar colaboradores, metas, contas a pagar/receber</td><td>Período/filtro.</td><td>Os dados correspondentes da sua conta.</td></tr>
+</table>
+<p>O HelpDol recebe do ChatGPT <strong>apenas os comandos necessários</strong> para executar a ação. O conteúdo das suas conversas com o ChatGPT é tratado pela OpenAI conforme a política de privacidade dela. Toda ação feita via ChatGPT fica registrada no seu log de auditoria.</p>
 
-<h2>5. Compartilhamento</h2>
-<p>Não vendemos seus dados. Compartilhamos dados apenas com os provedores necessários para operar o serviço: Supabase (banco de dados e autenticação), RevenueCat (assinaturas), OpenAI (processamento das conversas com o assistente) e provedores de OCR/voz quando você usa esses recursos.</p>
+<h2>5. Com quem compartilhamos (destinatários)</h2>
+<p>Compartilhamos dados apenas com prestadores de serviço necessários para operar o HelpDol, cada um tratando somente o dado indicado:</p>
+<table>
+  <tr><th>Provedor</th><th>Para quê</th></tr>
+  <tr><td>Supabase</td><td>Banco de dados e autenticação (armazenamento dos seus dados, servidores nos EUA).</td></tr>
+  <tr><td>OpenAI</td><td>Processamento do assistente de IA e da integração ChatGPT.</td></tr>
+  <tr><td>Stripe</td><td>Conexão bancária (Financial Connections): faz o login no seu banco e nos envia o histórico de transações. A Stripe é quem lida com suas credenciais bancárias.</td></tr>
+  <tr><td>RevenueCat</td><td>Gerenciamento de assinaturas e planos.</td></tr>
+  <tr><td>Twilio</td><td>Envio/recebimento de mensagens quando você usa o HelpDol por WhatsApp/SMS.</td></tr>
+  <tr><td>Provedores de OCR e voz</td><td>Leitura de recibos e transcrição de comandos de voz.</td></tr>
+</table>
+<p>Também podemos divulgar dados se exigido por lei ou ordem judicial.</p>
 
-<h2>6. Segurança</h2>
-<p>Os dados trafegam por HTTPS e são protegidos por autenticação. Cada usuário só acessa os próprios dados. Tokens de acesso expiram automaticamente.</p>
+<h2>6. Retenção — por quanto tempo guardamos</h2>
+<ul>
+  <li>Seus registros financeiros e cadastro ficam guardados <strong>enquanto sua conta estiver ativa</strong>.</li>
+  <li>Ao excluir sua conta, seus dados pessoais e financeiros são <strong>apagados</strong> dos nossos sistemas, exceto o que precisarmos manter por obrigação legal (ex.: registros fiscais/contábeis).</li>
+  <li>Os <strong>logs de auditoria</strong> são mantidos por até 12 meses para segurança e depois removidos.</li>
+  <li>Ao desconectar seu banco, a importação de novas transações para de imediato. As transações já importadas continuam no seu histórico até você apagá-las ou excluir a conta.</li>
+  <li>Os tokens de acesso (inclusive do ChatGPT) <strong>expiram automaticamente</strong> e só são renovados enquanto a autorização estiver ativa.</li>
+</ul>
 
-<h2>7. Seus direitos</h2>
-<p>Você pode exportar seus dados no aplicativo e excluir sua conta e todos os dados associados em Configurações → Excluir conta. Para dúvidas ou solicitações: <b>helpdolsuport@gmail.com</b>.</p>
+<h2>7. Segurança</h2>
+<p>Todos os dados trafegam por HTTPS e são protegidos por autenticação. Cada usuário acessa somente os próprios dados (isolamento por conta). Não recebemos nem guardamos senhas de banco. Os tokens de acesso expiram sozinhos.</p>
+
+<h2>8. Seus direitos e controles</h2>
+<ul>
+  <li><strong>Exportar</strong> seus dados (CSV) pelas Configurações do app.</li>
+  <li><strong>Excluir</strong> sua conta e seus dados pelas Configurações do app.</li>
+  <li><strong>Revogar o acesso do ChatGPT</strong> a qualquer momento (na autorização/conector).</li>
+  <li><strong>Desconectar seu banco</strong> a qualquer momento na tela de conexão bancária.</li>
+  <li>Solicitar acesso, correção ou exclusão escrevendo para <a href="mailto:helpdolsuport@gmail.com">helpdolsuport@gmail.com</a>.</li>
+</ul>
+
+<h2>9. Alterações nesta política</h2>
+<p>Podemos atualizar esta política conforme o HelpDol evolui. A data de "Última atualização" no topo indica a versão vigente. Mudanças relevantes serão comunicadas no app.</p>
+
+<p class="foot">HelpDol · Contato: <a href="mailto:helpdolsuport@gmail.com">helpdolsuport@gmail.com</a></p>
 </body>
 </html>
