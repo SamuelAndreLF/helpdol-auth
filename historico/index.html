@@ -50,28 +50,25 @@
   function esc(s){ var d=document.createElement('div'); d.textContent=(s==null?'':String(s)); return d.innerHTML; }
   function fmtData(d){ if(!d||!/^\d{4}-\d{2}-\d{2}$/.test(d)) return d||''; var x=d.split('-'); return x[2]+'/'+x[1]+'/'+x[0]; }
 
-  var dados = { moeda:'USD', itens:[] };
-  try {
-    var raw = new URLSearchParams(location.search).get('d') || '';
-    raw = raw.replace(/-/g,'+').replace(/_/g,'/');
-    dados = JSON.parse(decodeURIComponent(escape(atob(raw))));
-  } catch(e) { dados = { moeda:'USD', itens:[] }; }
-
-  var moeda = (dados.moeda||'USD').toUpperCase();
-  var sym = simbolos[moeda] || (moeda+' ');
-  function f(x){ return sym+' '+(parseFloat(x||0)||0).toFixed(2); }
-  var itens = dados.itens || [];
+  var moeda='USD', sym='US$', itens=[];
   var rotuloTipo = { entrada:'Entrada', despesa:'Despesa', colaborador:'Colaborador' };
+  function f(x){ return sym+' '+(parseFloat(x||0)||0).toFixed(2); }
 
-  var inc=0, out=0;
-  itens.forEach(function(i){ if(i.ty==='entrada') inc+=(+i.v||0); else out+=(+i.v||0); });
-  var periodo = '';
-  if(dados.inicio) periodo = 'Período: <b>'+fmtData(dados.inicio)+'</b> a <b>'+(dados.fim?fmtData(dados.fim):'hoje')+'</b><br>';
-  document.getElementById('meta').innerHTML = periodo +
-    itens.length+' lançamentos · Entradas <b>'+f(inc)+'</b> · Saídas <b>'+f(out)+'</b> · Saldo <b>'+f(inc-out)+'</b>';
+  function render(dados){
+    dados = dados || { moeda:'USD', itens:[] };
+    moeda = (dados.moeda||'USD').toUpperCase();
+    sym = simbolos[moeda] || (moeda+' ');
+    itens = dados.itens || [];
 
-  if(!itens.length){ document.getElementById('empty').style.display='block'; }
-  else {
+    var inc=0, out=0;
+    itens.forEach(function(i){ if(i.ty==='entrada') inc+=(+i.v||0); else out+=(+i.v||0); });
+    var periodo = '';
+    if(dados.inicio) periodo = 'Período: <b>'+fmtData(dados.inicio)+'</b> a <b>'+(dados.fim?fmtData(dados.fim):'hoje')+'</b><br>';
+    document.getElementById('meta').innerHTML = periodo +
+      itens.length+' lançamentos · Entradas <b>'+f(inc)+'</b> · Saídas <b>'+f(out)+'</b> · Saldo <b>'+f(inc-out)+'</b>';
+
+    if(!itens.length){ document.getElementById('empty').style.display='block'; document.getElementById('tabela').innerHTML=''; return; }
+    document.getElementById('empty').style.display='none';
     var h = '<table><thead><tr><th>Data</th><th>Tipo</th><th>Nome</th><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th></tr></thead><tbody>';
     itens.forEach(function(i){
       var ent = i.ty==='entrada';
@@ -87,6 +84,24 @@
     h += '<tr class="tot"><td colspan="5">SALDO DO PERÍODO</td><td class="v '+((inc-out)>=0?'pos':'neg')+'">'+f(inc-out)+'</td></tr>';
     h += '</tbody></table>';
     document.getElementById('tabela').innerHTML = h;
+  }
+
+  // Novo: relatório curto por token (?id=). Antigo: histórico embutido no ?d= (fallback).
+  var _params = new URLSearchParams(location.search);
+  var _id = _params.get('id');
+  if (_id) {
+    document.getElementById('meta').innerHTML = 'Carregando…';
+    fetch('https://kcslltohicvlgunvuhbl.supabase.co/functions/v1/helpdol-report?id='+encodeURIComponent(_id))
+      .then(function(r){ return r.json(); })
+      .then(function(d){ render(d && d.itens ? d : { moeda:'USD', itens:[] }); })
+      .catch(function(){ render({ moeda:'USD', itens:[] }); });
+  } else {
+    var dados = { moeda:'USD', itens:[] };
+    try {
+      var raw = (_params.get('d')||'').replace(/-/g,'+').replace(/_/g,'/');
+      dados = JSON.parse(decodeURIComponent(escape(atob(raw))));
+    } catch(e) {}
+    render(dados);
   }
 
   function baixarCSV(){
