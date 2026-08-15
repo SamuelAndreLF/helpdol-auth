@@ -66,14 +66,11 @@
       Se entrar com outro e-mail, o ChatGPT vai abrir uma conta vazia e nao vai
       achar os seus lancamentos.
     </div>
-    <!-- ENTRAR COM A APPLE — DESLIGADO.
-         O provedor Apple nao esta configurado no Supabase (a chamada devolve
-         "Unsupported provider: missing OAuth secret"), entao o botao falhava
-         para todo mundo que clicava. Melhor nao existir do que existir quebrado.
-         PARA RELIGAR: Supabase > Authentication > Providers > Apple, preencher
-         Services ID + Team ID + Key ID + chave .p8, e descomentar a linha abaixo.
+    <!-- Entrar com a Apple: religado em 15/08/2026, quando o provedor foi
+         configurado no Supabase (Services ID com.helpdol.app.web).
+         ATENCAO: o segredo da Apple VENCE EM 14/02/2027. Quando vencer, este
+         botao volta a falhar sem aviso — e so gerar outro segredo. -->
     <button class="btn-apple" onclick="entrarApple()"><span></span> Entrar com a Apple</button>
-    -->
     <button class="btn-google" onclick="entrarGoogle()"><span class="g" style="color:#4285F4">G</span> Continuar com Google</button>
     <div class="divisor">ou</div>
     <input id="email" type="email" placeholder="Email" autocomplete="email">
