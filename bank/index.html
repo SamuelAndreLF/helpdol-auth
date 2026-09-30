@@ -6,42 +6,99 @@
 <title>Conectar banco • HelpDol</title>
 <script src="https://js.stripe.com/v3/"></script>
 <style>
+  /* A paleta do app (AppLight): cinza do ChatGPT, sem dourado. A página era
+     dourada, do tema antigo — quem vinha do app achava que tinha caído noutro
+     serviço no meio do caminho de ligar o banco. */
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    background:#0f1115; color:#f4f4f5; display:flex; min-height:100vh; align-items:center; justify-content:center; padding:24px; }
-  .card { width:100%; max-width:420px; background:#181b22; border:1px solid #262a33; border-radius:20px; padding:32px 24px; text-align:center; }
-  .logo { width:64px; height:64px; border-radius:16px; margin:0 auto 18px;
-    background:linear-gradient(135deg,#c9a227,#f2d675); display:flex; align-items:center; justify-content:center; font-size:30px; }
+    background:#0D0D0D; color:#ECECEC; display:flex; min-height:100vh; align-items:center; justify-content:center; padding:24px; }
+  .card { width:100%; max-width:420px; background:#1C1C1C; border:1px solid #343434; border-radius:20px; padding:32px 24px; text-align:center; }
+  .logo { width:64px; height:64px; border-radius:18px; margin:0 auto 18px; background:#2A2A2A; border:1px solid #343434;
+    display:flex; align-items:center; justify-content:center; font-size:30px; }
   h1 { font-size:20px; margin:0 0 8px; }
-  p { color:#a1a1aa; font-size:15px; line-height:1.5; margin:0 0 24px; }
+  p { color:#9B9B9B; font-size:15px; line-height:1.5; margin:0 0 24px; }
   button { width:100%; border:0; border-radius:14px; padding:16px; font-size:16px; font-weight:600; cursor:pointer;
-    background:linear-gradient(135deg,#c9a227,#f2d675); color:#111; }
+    background:#ECECEC; color:#0D0D0D; }
   button:disabled { opacity:.6; }
   .sec { background:#22c55e !important; color:#052e16 !important; }
   .err { color:#f87171; font-size:14px; margin-top:16px; }
   .muted { font-size:13px; color:#71717a; margin-top:18px; }
-  .spin { display:inline-block; width:18px; height:18px; border:3px solid rgba(0,0,0,.25); border-top-color:#111; border-radius:50%; animation:s .8s linear infinite; vertical-align:-3px; margin-right:8px; }
+  .spin { display:inline-block; width:20px; height:20px; border:3px solid #343434; border-top-color:#ECECEC; border-radius:50%; animation:s .8s linear infinite; }
   @keyframes s { to { transform:rotate(360deg); } }
-  .hide { display:none; }
+  /* Com !important de propósito: `.espera` é display:flex e vem depois —
+     sem isto a rodinha continuava girando por cima da mensagem de erro. */
+  .hide { display:none !important; }
+  .espera { display:flex; align-items:center; justify-content:center; gap:10px; color:#9B9B9B; font-size:15px; padding:16px 0; }
 </style>
 </head>
 <body>
   <div class="card">
     <div class="logo">🏦</div>
-    <h1 id="ttl">Conectar seu banco</h1>
-    <p id="sub">Você será conectado com segurança pelo Stripe. O HelpDol só recebe suas transações — nunca sua senha do banco.</p>
-    <button id="go" onclick="start()">Escolher meu banco</button>
+    <h1 id="ttl">Conectando seu banco</h1>
+    <p id="sub">Escolha seu banco na lista do Stripe. O HelpDol só recebe suas transações — nunca sua senha do banco.</p>
+
+    <!-- A ESPERA É O ESTADO INICIAL, NÃO UM BOTÃO.
+         Esta página existia só para pedir um segundo toque: a pessoa já tinha
+         tocado em "Conectar banco" no app, e chegava aqui para tocar em
+         "Escolher meu banco" antes de ver banco nenhum. Dois toques para a
+         mesma decisão, e o primeiro ecrã do navegador com a nossa cara em vez
+         da lista de bancos — era isso que parecia um cadastro do site.
+         Agora a lista do Stripe abre sozinha; o botão só aparece se falhar. -->
+    <div id="espera" class="espera"><span class="spin"></span><span id="esperaTxt">Abrindo a lista de bancos…</span></div>
+    <button id="go" class="hide" onclick="start()">Escolher meu banco</button>
+
     <div id="err" class="err hide"></div>
-    <div class="muted">🔒 Conexão criptografada via Stripe</div>
+    <div class="muted" id="rodape">🔒 Conexão criptografada via Stripe</div>
   </div>
 <script>
   var q = new URLSearchParams(location.search);
   var pk = q.get('pk') || '';
   var cs = q.get('cs') || '';
   var sessionId = q.get('session') || '';
-  var stripe = pk ? Stripe(pk) : null;
+  var stripe = pk && window.Stripe ? Stripe(pk) : null;
 
-  function showErr(m){ var e=document.getElementById('err'); e.textContent=m; e.classList.remove('hide'); }
+  // A página é aberta pelo app, que sabe o idioma da pessoa. Antes era só
+  // português: quem usa o app em inglês ou espanhol saía do app na sua língua
+  // e caía numa página noutra.
+  var L = {
+    pt: { ttl:'Conectando seu banco', sub:'Escolha seu banco na lista do Stripe. O HelpDol só recebe suas transações — nunca sua senha do banco.',
+          espera:'Abrindo a lista de bancos…', btn:'Escolher meu banco', retry:'Tentar de novo',
+          okTtl:'Banco conectado! ✅', okSub:'Suas transações serão importadas automaticamente. Voltando para o HelpDol…',
+          voltar:'Voltar para o HelpDol', rodape:'🔒 Conexão criptografada via Stripe',
+          semSessao:'Sessão inválida. Volte ao app e tente de novo.', semPk:'Configuração do Stripe ausente (chave publicável).',
+          nenhuma:'Nenhuma conta foi selecionada.', erro:'Não foi possível conectar. Tente de novo.' },
+    en: { ttl:'Connecting your bank', sub:'Pick your bank from Stripe’s list. HelpDol only receives your transactions — never your bank password.',
+          espera:'Opening the bank list…', btn:'Choose my bank', retry:'Try again',
+          okTtl:'Bank connected! ✅', okSub:'Your transactions will be imported automatically. Going back to HelpDol…',
+          voltar:'Back to HelpDol', rodape:'🔒 Encrypted connection via Stripe',
+          semSessao:'Invalid session. Go back to the app and try again.', semPk:'Missing Stripe configuration (publishable key).',
+          nenhuma:'No account was selected.', erro:'Could not connect. Please try again.' },
+    es: { ttl:'Conectando tu banco', sub:'Elige tu banco en la lista de Stripe. HelpDol solo recibe tus movimientos — nunca la contraseña de tu banco.',
+          espera:'Abriendo la lista de bancos…', btn:'Elegir mi banco', retry:'Intentar de nuevo',
+          okTtl:'¡Banco conectado! ✅', okSub:'Tus movimientos se importarán automáticamente. Volviendo a HelpDol…',
+          voltar:'Volver a HelpDol', rodape:'🔒 Conexión cifrada vía Stripe',
+          semSessao:'Sesión inválida. Vuelve a la app e inténtalo de nuevo.', semPk:'Falta la configuración de Stripe (clave publicable).',
+          nenhuma:'No se seleccionó ninguna cuenta.', erro:'No se pudo conectar. Inténtalo de nuevo.' }
+  };
+  var t = L[(q.get('lang') || 'pt').slice(0,2).toLowerCase()] || L.pt;
+  document.documentElement.lang = (q.get('lang') || 'pt').slice(0,2).toLowerCase();
+
+  var elTtl = document.getElementById('ttl');
+  var elSub = document.getElementById('sub');
+  var elEspera = document.getElementById('espera');
+  var elEsperaTxt = document.getElementById('esperaTxt');
+  var elGo = document.getElementById('go');
+  var elErr = document.getElementById('err');
+
+  elTtl.textContent = t.ttl;
+  elSub.textContent = t.sub;
+  elEsperaTxt.textContent = t.espera;
+  elGo.textContent = t.btn;
+  document.getElementById('rodape').textContent = t.rodape;
+
+  function showErr(m){ elErr.textContent = m; elErr.classList.remove('hide'); }
+  function esperando(sim){ elEspera.classList.toggle('hide', !sim); }
+  function mostrarBotao(rotulo){ elGo.textContent = rotulo; elGo.disabled = false; elGo.classList.remove('hide'); }
 
   function backToApp(){
     // Volta pro app; o app conclui a conexão (chama o -link) sozinho.
@@ -49,39 +106,45 @@
   }
 
   function done(){
-    document.getElementById('ttl').textContent = 'Banco conectado! ✅';
-    document.getElementById('sub').textContent = 'Suas transações serão importadas automaticamente. Voltando para o HelpDol...';
-    var b = document.getElementById('go');
-    b.className = 'sec';
-    b.disabled = false;
-    b.textContent = 'Voltar para o HelpDol';
-    b.onclick = backToApp;
+    esperando(false);
+    elErr.classList.add('hide');
+    elTtl.textContent = t.okTtl;
+    elSub.textContent = t.okSub;
+    elGo.className = 'sec';
+    mostrarBotao(t.voltar);
+    elGo.onclick = backToApp;
     setTimeout(backToApp, 1200);
   }
 
   function start(){
-    if(!stripe){ showErr('Configuração do Stripe ausente (chave publicável).'); return; }
-    if(!cs){ showErr('Sessão inválida. Volte ao app e tente de novo.'); return; }
-    var b = document.getElementById('go');
-    b.disabled = true;
-    b.innerHTML = '<span class="spin"></span>Abrindo bancos...';
+    elErr.classList.add('hide');
+    if(!window.Stripe){ esperando(false); showErr(t.erro); mostrarBotao(t.retry); return; }
+    if(!stripe){ esperando(false); showErr(t.semPk); return; }
+    if(!cs){ esperando(false); showErr(t.semSessao); return; }
+    elGo.classList.add('hide');
+    esperando(true);
+    // Rede de segurança: se o modal do Stripe não abrir (navegador que exige
+    // toque, js.stripe.com bloqueado), o botão reaparece em vez de a pessoa
+    // ficar olhando um rodinha para sempre.
+    var salvarei = setTimeout(function(){ mostrarBotao(t.btn); }, 6000);
     stripe.collectFinancialConnectionsAccounts({ clientSecret: cs }).then(function(res){
-      if(res.error){
-        b.disabled=false; b.textContent='Tentar de novo';
-        showErr(res.error.message || 'Não foi possível conectar. Tente de novo.');
-        return;
-      }
+      clearTimeout(salvarei);
+      esperando(false);
+      if(res.error){ showErr(res.error.message || t.erro); mostrarBotao(t.retry); return; }
       var s = res.financialConnectionsSession;
       if(s && s.accounts && s.accounts.length){ done(); }
-      else {
-        b.disabled=false; b.textContent='Escolher meu banco';
-        showErr('Nenhuma conta foi selecionada.');
-      }
+      else { showErr(t.nenhuma); mostrarBotao(t.btn); }
     }).catch(function(e){
-      b.disabled=false; b.textContent='Tentar de novo';
-      showErr(String(e && e.message ? e.message : e));
+      clearTimeout(salvarei);
+      esperando(false);
+      showErr(String(e && e.message ? e.message : e) || t.erro);
+      mostrarBotao(t.retry);
     });
   }
+
+  // Abre sozinho. Sem segundo toque.
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 </script>
 </body>
 </html>
