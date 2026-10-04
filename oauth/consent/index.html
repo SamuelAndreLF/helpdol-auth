@@ -56,6 +56,24 @@
     <button class="btn-secondary" onclick="trocarConta()">Entrar com outra conta</button>
   </div>
 
+  <!-- Conta criada AGORA, neste login. Quase sempre e alguem que ja usa o
+       app com outro botao (Apple x Google) e acabou de ganhar uma conta
+       vazia sem perceber: o ChatGPT ficaria ligado nela e o app em outra.
+       Nao barramos, porque quem e novo de verdade pode chegar pelo
+       ChatGPT — so perguntamos, com um botao para cada resposta. -->
+  <div id="nova" class="hidden">
+    <h2>Esta é uma conta nova</h2>
+    <div class="userinfo" id="novaConta"></div>
+    <div class="aviso-conta">
+      <strong>Você já usa o aplicativo HelpDol?</strong>
+      Então volte e entre com o MESMO botão que você usa no aplicativo
+      (Apple, Google ou e-mail). Senão o ChatGPT fica ligado nesta conta vazia
+      e não vê os seus lançamentos.
+    </div>
+    <button class="btn-primary" onclick="jaUsoOApp()">Sim, já uso o aplicativo</button>
+    <button class="btn-secondary" onclick="continuarConta()">Não, sou novo no HelpDol</button>
+  </div>
+
   <div id="login" class="hidden">
     <h2>Entre na sua conta HelpDol</h2>
     <!-- Sem este aviso a pessoa entra com outra conta de e-mail, o ChatGPT
@@ -118,7 +136,7 @@ const supabase = createClient('https://kcslltohicvlgunvuhbl.supabase.co', 'eyJhb
 const authorizationId = new URLSearchParams(location.search).get('authorization_id')
 
 const el = (id) => document.getElementById(id)
-const mostrar = (id) => { ['loading','login','consent','chooser','otp'].forEach(x => el(x).classList.add('hidden')); el(id).classList.remove('hidden') }
+const mostrar = (id) => { ['loading','login','consent','chooser','otp','nova'].forEach(x => el(x).classList.add('hidden')); el(id).classList.remove('hidden') }
 const mostrarErro = (msg) => { el('erro').textContent = msg; el('erro').style.display = 'block' }
 const limparErro = () => { el('erro').style.display = 'none' }
 const mostrarInfo = (msg) => { el('info').textContent = msg; el('info').style.display = 'block' }
@@ -136,9 +154,34 @@ async function iniciar() {
   }
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) { mostrar('login'); return }
-  el('chooserEmail').textContent = session.user?.email || ''
   window._sessaoAtual = session
+  if (contaNova(session)) {
+    el('novaConta').textContent = descreverConta(session)
+    mostrar('nova')
+    return
+  }
+  el('chooserEmail').textContent = descreverConta(session)
   mostrar('chooser')
+}
+
+// "Google · fulano@gmail.com": o botao usado e o que a pessoa reconhece,
+// mais do que o e-mail (a Apple ainda troca o e-mail por um codigo).
+function descreverConta(session) {
+  const u = session.user || {}
+  const p = (u.app_metadata && u.app_metadata.provider) || 'email'
+  const nome = p === 'google' ? 'Google' : p === 'apple' ? 'Apple' : 'E-mail'
+  return nome + ' · ' + (u.email || '')
+}
+
+// Criada neste mesmo login (Supabase cria a conta no primeiro OAuth).
+function contaNova(session) {
+  const criada = Date.parse(session.user?.created_at || '')
+  return Number.isFinite(criada) && Date.now() - criada < 10 * 60 * 1000
+}
+
+window.jaUsoOApp = async () => {
+  await window.trocarConta()
+  mostrarInfo('Entre com o MESMO botão que você usa no aplicativo HelpDol.')
 }
 
 async function carregarConsent(session) {
@@ -152,7 +195,7 @@ async function carregarConsent(session) {
     const nome = data?.client?.name || data?.client_name || 'ChatGPT'
     el('clientName').textContent = nome
     el('titulo').textContent = 'Autorizar ' + nome + '?'
-    el('usuario').textContent = 'Conectado como ' + (session.user?.email || '')
+    el('usuario').textContent = 'Conectando a conta ' + descreverConta(session)
     mostrar('consent')
   } catch (e) {
     mostrarErro('Não foi possível carregar a autorização: ' + (e.message || e))
