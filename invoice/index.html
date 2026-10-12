@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invoice — HelpDol</title>
+<style>
+  /* Mesma cara do recibo do colaborador (../recibo/): o dono da fatura chega
+     aqui pelo link do ChatGPT e manda a fatura para o cliente sem passar
+     pelo PDF cru no navegador. */
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; color: #16213e; padding: 24px 16px; }
+  .wrap { max-width: 480px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 18px; box-shadow: 0 8px 30px rgba(0,0,0,.08); overflow: hidden; }
+  .top { background: #16213e; color: #fff; padding: 22px 24px; }
+  .brand { font-size: 20px; font-weight: 800; letter-spacing: .3px; }
+  .brand span { opacity: .85; font-weight: 600; }
+  .title { font-size: 13px; opacity: .9; margin-top: 2px; }
+  .num { font-size: 12px; opacity: .85; margin-top: 8px; font-variant-numeric: tabular-nums; letter-spacing: .5px; }
+  .body { padding: 22px 24px; }
+  .valor { font-size: 34px; font-weight: 800; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+  .valor-label { font-size: 12px; color: #6b7280; margin-bottom: 18px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #f0f1f3; font-size: 15px; }
+  .row:last-child { border-bottom: none; }
+  .row .k { color: #6b7280; }
+  .row .v { font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+  .selo { margin-top: 16px; font-weight: 700; font-size: 14px; }
+  .selo.paga { color: #16a34a; }
+  .selo.cancelada { color: #b91c1c; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 12px; padding: 15px; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; text-decoration: none; color: #fff; font-family: inherit; }
+  .btn svg { width: 20px; height: 20px; flex: none; }
+  .wa { background: #25D366; margin-top: 18px; }
+  .pdf { background: #16213e; }
+  .mail { background: #2563eb; }
+  .btn:disabled { opacity: .6; }
+  .link { display: block; text-align: center; color: #4b5563; font-size: 14px; margin-top: 16px; text-decoration: underline; }
+  .hint { text-align: center; color: #6b7280; font-size: 12px; margin-top: 10px; line-height: 1.45; }
+  .foot { text-align: center; color: #9ca3af; font-size: 11px; padding: 14px; }
+  .msg { text-align: center; padding: 60px 20px; color: #6b7280; line-height: 1.5; }
+  .msg h2 { color: #16213e; font-size: 20px; margin-bottom: 8px; }
+  .hide { display: none !important; }
+  .spin { display: inline-block; width: 26px; height: 26px; border: 3px solid #e5e7eb; border-top-color: #16213e; border-radius: 50%; animation: s .8s linear infinite; }
+  @keyframes s { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="carregando" class="msg"><span class="spin"></span></div>
+    <div id="erro" class="msg hide"><h2 id="erroTtl"></h2><p id="erroTxt"></p></div>
+
+    <div id="conteudo" class="hide">
+      <div class="card">
+        <div class="top">
+          <div class="brand">Help<span>Dol</span></div>
+          <div class="title" id="empresa"></div>
+          <div class="num" id="num"></div>
+        </div>
+        <div class="body">
+          <div class="valor" id="valor"></div>
+          <div class="valor-label" id="valorLabel"></div>
+          <div class="row"><span class="k" id="kCliente"></span><span class="v" id="cliente"></span></div>
+          <div class="row" id="linhaVenc"><span class="k" id="kVenc"></span><span class="v" id="venc"></span></div>
+          <div class="row hide" id="linhaFone"><span class="k">WhatsApp</span><span class="v" id="fone"></span></div>
+          <div class="row hide" id="linhaEmail"><span class="k">E-mail</span><span class="v" id="email"></span></div>
+          <div class="selo hide" id="selo"></div>
+        </div>
+        <div class="foot" id="rodape"></div>
+      </div>
+
+      <a class="btn wa" id="bWa" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.4.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 2.9 2.9 0 0 0-.9 2.2 5 5 0 0 0 1 2.7 11.5 11.5 0 0 0 4.4 3.9c1.6.7 2.3.8 3.1.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .2-1.2c-.1-.1-.3-.2-.5-.3z"/></svg>
+        <span id="tWa"></span>
+      </a>
+      <button class="btn pdf" id="bPdf" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6M9 15l3 3 3-3"/></svg>
+        <span id="tPdf"></span>
+      </button>
+      <a class="btn mail" id="bMail">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+        <span id="tMail"></span>
+      </a>
+      <a class="link" id="bVer" target="_blank" rel="noopener"></a>
+      <div class="hint" id="dica"></div>
+    </div>
+  </div>
+<script>
+  var FUNCAO = 'https://kcslltohicvlgunvuhbl.supabase.co/functions/v1/helpdol-invoice';
+  var token = new URLSearchParams(location.search).get('t') || '';
+
+  // A página é do dono da fatura, então fala a língua do celular dele. A
+  // mensagem que vai para o cliente vem pronta do servidor, na língua da
+  // fatura.
+  var lang = (navigator.language || 'en').slice(0, 2);
+  var TEXTOS = {
+    pt: { fatura: 'Fatura', aReceber: 'Valor a receber', total: 'Valor total', cliente: 'Cliente', venc: 'Vencimento',
+          paga: '✅ Fatura paga', cancelada: 'Fatura cancelada', wa: 'Enviar pelo WhatsApp', pdf: 'Enviar PDF',
+          mail: 'Enviar por e-mail', ver: 'Abrir o PDF / imprimir', rodape: 'Fatura gerada pelo HelpDol · helpdol.com',
+          dica: 'WhatsApp e e-mail mandam a mensagem com o link da fatura. "Enviar PDF" manda o arquivo — para salvar, imprimir ou anexar.',
+          erroTtl: 'Fatura não encontrada', erroTxt: 'Este link não vale mais. Peça um novo no ChatGPT ou abra a fatura pelo app do HelpDol.',
+          falha: 'Não consegui carregar a fatura. Verifique a internet e recarregue a página.' },
+    es: { fatura: 'Factura', aReceber: 'Monto por cobrar', total: 'Monto total', cliente: 'Cliente', venc: 'Vencimiento',
+          paga: '✅ Factura pagada', cancelada: 'Factura anulada', wa: 'Enviar por WhatsApp', pdf: 'Enviar PDF',
+          mail: 'Enviar por correo', ver: 'Abrir el PDF / imprimir', rodape: 'Factura generada por HelpDol · helpdol.com',
+          dica: 'WhatsApp y correo envían el mensaje con el enlace de la factura. "Enviar PDF" envía el archivo — para guardar, imprimir o adjuntar.',
+          erroTtl: 'Factura no encontrada', erroTxt: 'Este enlace ya no es válido. Pide uno nuevo en ChatGPT o abre la factura en la app de HelpDol.',
+          falha: 'No se pudo cargar la factura. Revisa tu conexión y recarga la página.' },
+    en: { fatura: 'Invoice', aReceber: 'Amount due', total: 'Total', cliente: 'Client', venc: 'Due date',
+          paga: '✅ Invoice paid', cancelada: 'Invoice void', wa: 'Send on WhatsApp', pdf: 'Send PDF',
+          mail: 'Send by email', ver: 'Open the PDF / print', rodape: 'Invoice generated by HelpDol · helpdol.com',
+          dica: 'WhatsApp and email send a message with the invoice link. "Send PDF" sends the file itself — to save, print or attach.',
+          erroTtl: 'Invoice not found', erroTxt: 'This link is no longer valid. Ask ChatGPT for a new one or open the invoice in the HelpDol app.',
+          falha: 'Could not load the invoice. Check your connection and reload the page.' },
+  };
+  var T = TEXTOS[lang] || TEXTOS.en;
+  document.documentElement.lang = TEXTOS[lang] ? lang : 'en';
+
+  function $(id) { return document.getElementById(id); }
+  function mostrarErro(ttl, txt) {
+    $('carregando').classList.add('hide');
+    $('erroTtl').textContent = ttl; $('erroTxt').textContent = txt;
+    $('erro').classList.remove('hide');
+  }
+
+  /// Data da fatura (2026-11-09) no formato do celular.
+  function data(iso) {
+    if (!/^\d{4}-\d{2}-\d{2}/.test(iso || '')) return '';
+    var d = new Date(iso.slice(0, 10) + 'T12:00:00Z');
+    try { return d.toLocaleDateString(navigator.language || 'en-US', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); }
+    catch (e) { return iso.slice(0, 10); }
+  }
+
+  /// wa.me quer só dígitos com o código do país. Telefone dos EUA cadastrado
+  /// sem o 1 (10 dígitos) ganha o 1; sem telefone, o WhatsApp abre para a
+  /// pessoa escolher o contato.
+  function numeroWhats(fone, moeda) {
+    var d = String(fone || '').replace(/\D/g, '');
+    if (!d) return '';
+    if (d.length === 10 && moeda === 'USD') d = '1' + d;
+    return d;
+  }
+
+  var pdfArquivo = null; // o PDF já baixado, para o compartilhar abrir no toque
+
+  function montar(f) {
+    document.title = T.fatura + ' ' + f.codigo + ' — HelpDol';
+    $('empresa').textContent = f.empresa || '';
+    $('num').textContent = T.fatura + ' ' + f.codigo;
+    $('valor').textContent = f.valor_formatado;
+    $('valorLabel').textContent = f.status === 'aberta' ? T.aReceber : T.total;
+    $('kCliente').textContent = T.cliente;
+    $('cliente').textContent = f.cliente_nome;
+    $('kVenc').textContent = T.venc;
+    $('venc').textContent = data(f.vencimento);
+    if (f.status !== 'aberta') {
+      $('linhaVenc').classList.add('hide');
+      $('selo').textContent = f.status === 'paga' ? T.paga : T.cancelada;
+      $('selo').className = 'selo ' + f.status;
+    }
+    if (f.cliente_telefone) { $('fone').textContent = f.cliente_telefone; $('linhaFone').classList.remove('hide'); }
+    if (f.cliente_email) { $('email').textContent = f.cliente_email; $('linhaEmail').classList.remove('hide'); }
+    $('rodape').textContent = T.rodape;
+
+    $('tWa').textContent = T.wa;
+    $('tPdf').textContent = T.pdf;
+    $('tMail').textContent = T.mail;
+    $('bVer').textContent = T.ver;
+    $('dica').textContent = T.dica;
+
+    $('bWa').href = 'https://wa.me/' + numeroWhats(f.cliente_telefone, f.moeda) + '?text=' + encodeURIComponent(f.mensagem);
+    $('bMail').href = 'mailto:' + encodeURIComponent(f.cliente_email || '').replace(/%40/g, '@')
+      + '?subject=' + encodeURIComponent(f.assunto) + '&body=' + encodeURIComponent(f.mensagem);
+    $('bVer').href = f.pdf_url;
+
+    // Baixa o PDF já na chegada: o Safari só abre o compartilhar de arquivo
+    // se for logo depois do toque, sem esperar download no meio.
+    fetch(f.pdf_url).then(function (r) { if (!r.ok) throw 0; return r.blob(); }).then(function (b) {
+      pdfArquivo = new File([b], 'Invoice-' + f.codigo + '.pdf', { type: 'application/pdf' });
+    }).catch(function () {});
+
+    $('bPdf').onclick = function () {
+      if (pdfArquivo && navigator.canShare && navigator.canShare({ files: [pdfArquivo] })) {
+        navigator.share({ files: [pdfArquivo], title: f.assunto }).catch(function (e) {
+          if (!e || e.name !== 'AbortError') location.href = f.pdf_url;
+        });
+      } else {
+        // Computador ou navegador sem compartilhar arquivo: abre o PDF, de
+        // onde dá para salvar e imprimir.
+        window.open(f.pdf_url, '_blank') || (location.href = f.pdf_url);
+      }
+    };
+
+    $('carregando').classList.add('hide');
+    $('conteudo').classList.remove('hide');
+  }
+
+  if (!/^[0-9a-f]{32}\.\d+\.[\w-]+$/.test(token)) {
+    mostrarErro(T.erroTtl, T.erroTxt);
+  } else {
+    fetch(FUNCAO + '?info=1&t=' + encodeURIComponent(token))
+      .then(function (r) {
+        if (r.status === 404) { mostrarErro(T.erroTtl, T.erroTxt); return null; }
+        if (!r.ok) throw 0;
+        return r.json();
+      })
+      .then(function (f) { if (f) montar(f); })
+      .catch(function () { mostrarErro(T.erroTtl, T.falha); });
+  }
+</script>
+</body>
+</html>
