@@ -117,6 +117,7 @@
   function $(id) { return document.getElementById(id); }
   function mostrarErro(ttl, txt) {
     $('carregando').classList.add('hide');
+    $('conteudo').classList.add('hide');
     $('erroTtl').textContent = ttl; $('erroTxt').textContent = txt;
     $('erro').classList.remove('hide');
   }
@@ -140,10 +141,11 @@
   }
 
   var pdfArquivo = null; // o PDF já baixado, para o compartilhar abrir no toque
+  var pdfPedido = false;
 
   function montar(f) {
     document.title = T.fatura + ' ' + f.codigo + ' — HelpDol';
-    $('empresa').textContent = f.empresa || '';
+    if (f.empresa) $('empresa').textContent = f.empresa;
     $('num').textContent = T.fatura + ' ' + f.codigo;
     $('valor').textContent = f.valor_formatado;
     $('valorLabel').textContent = f.status === 'aberta' ? T.aReceber : T.total;
@@ -151,13 +153,13 @@
     $('cliente').textContent = f.cliente_nome;
     $('kVenc').textContent = T.venc;
     $('venc').textContent = data(f.vencimento);
+    $('linhaVenc').classList.toggle('hide', f.status !== 'aberta');
     if (f.status !== 'aberta') {
-      $('linhaVenc').classList.add('hide');
       $('selo').textContent = f.status === 'paga' ? T.paga : T.cancelada;
       $('selo').className = 'selo ' + f.status;
     }
-    if (f.cliente_telefone) { $('fone').textContent = f.cliente_telefone; $('linhaFone').classList.remove('hide'); }
-    if (f.cliente_email) { $('email').textContent = f.cliente_email; $('linhaEmail').classList.remove('hide'); }
+    $('fone').textContent = f.cliente_telefone || ''; $('linhaFone').classList.toggle('hide', !f.cliente_telefone);
+    $('email').textContent = f.cliente_email || ''; $('linhaEmail').classList.toggle('hide', !f.cliente_email);
     $('rodape').textContent = T.rodape;
 
     $('tWa').textContent = T.wa;
@@ -173,9 +175,12 @@
 
     // Baixa o PDF já na chegada: o Safari só abre o compartilhar de arquivo
     // se for logo depois do toque, sem esperar download no meio.
-    fetch(f.pdf_url).then(function (r) { if (!r.ok) throw 0; return r.blob(); }).then(function (b) {
-      pdfArquivo = new File([b], 'Invoice-' + f.codigo + '.pdf', { type: 'application/pdf' });
-    }).catch(function () {});
+    if (!pdfPedido) {
+      pdfPedido = true;
+      fetch(f.pdf_url).then(function (r) { if (!r.ok) throw 0; return r.blob(); }).then(function (b) {
+        pdfArquivo = new File([b], 'Invoice-' + f.codigo + '.pdf', { type: 'application/pdf' });
+      }).catch(function () {});
+    }
 
     $('bPdf').onclick = function () {
       if (pdfArquivo && navigator.canShare && navigator.canShare({ files: [pdfArquivo] })) {
@@ -193,9 +198,40 @@
     $('conteudo').classList.remove('hide');
   }
 
+  /// A mensagem para o cliente enquanto a do servidor não chega (mesmo texto
+  /// de `dadosDeEnvio` em _shared/invoice.ts, sem o nome da empresa).
+  var MSG = {
+    en: function (n, c, v, d) { return 'Hi ' + n + ',\n\nHere is invoice ' + c + ' for ' + v + (d ? ', due ' + d : '') + '.\n\n'; },
+    es: function (n, c, v, d) { return 'Hola ' + n + ',\n\nLe envío la factura ' + c + ' por ' + v + (d ? ', con vencimiento el ' + d : '') + '.\n\n'; },
+    pt: function (n, c, v, d) { return 'Olá, ' + n + '!\n\nSegue a fatura ' + c + ' no valor de ' + v + (d ? ', com vencimento em ' + d : '') + '.\n\n'; },
+  };
+  var FIM = { en: 'Thank you!', es: '¡Gracias!', pt: 'Obrigado!' };
+  var ASSUNTO = { en: 'Invoice ', es: 'Factura ', pt: 'Fatura ' };
+
+  function doLink(p) {
+    var c = p.get('c'), n = p.get('n'), v = p.get('v');
+    if (!c || !n || !v) return null;
+    var l = MSG[p.get('l')] ? p.get('l') : 'en';
+    var s = p.get('s') || 'aberta';
+    var d = p.get('d') || '';
+    var pdf = FUNCAO + '/' + encodeURIComponent('Invoice-' + c + '.pdf') + '?t=' + token;
+    var dTexto = '';
+    if (s === 'aberta' && d) {
+      try { dTexto = new Date(d + 'T12:00:00Z').toLocaleDateString(l === 'pt' ? 'pt-BR' : l === 'es' ? 'es-US' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }); } catch (e) {}
+    }
+    return {
+      codigo: c, cliente_nome: n, valor_formatado: v, status: s, vencimento: d, moeda: 'USD',
+      cliente_telefone: '', cliente_email: '', empresa: '', pdf_url: pdf,
+      assunto: ASSUNTO[l] + c,
+      mensagem: MSG[l](n, c, v, dTexto) + pdf + '\n\n' + FIM[l],
+    };
+  }
+
   if (!/^[0-9a-f]{32}\.\d+\.[\w-]+$/.test(token)) {
     mostrarErro(T.erroTtl, T.erroTxt);
   } else {
+    var rapido = doLink(new URLSearchParams(location.search));
+    if (rapido) montar(rapido);
     fetch(FUNCAO + '?info=1&t=' + encodeURIComponent(token))
       .then(function (r) {
         if (r.status === 404) { mostrarErro(T.erroTtl, T.erroTxt); return null; }
@@ -203,7 +239,9 @@
         return r.json();
       })
       .then(function (f) { if (f) montar(f); })
-      .catch(function () { mostrarErro(T.erroTtl, T.falha); });
+      // Já montada com os dados do link, a página segue funcionando sem o
+      // servidor; só sem telefone e e-mail do cliente.
+      .catch(function () { if (!rapido) mostrarErro(T.erroTtl, T.falha); });
   }
 </script>
 </body>
