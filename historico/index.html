@@ -53,7 +53,7 @@
   var moeda='USD', sym='US$', itens=[];
   var rotuloTipo = { entrada:'Entrada', despesa:'Despesa', colaborador:'Colaborador', pessoal:'Pessoal' };
   // Sugestão fiscal da IA, ao lado da categoria. Não muda nenhum total.
-  var rotuloFiscal = { dedutivel:'pot. dedutível', nao_dedutivel:'prov. não dedutível', indeterminado:'fiscal indeterminado' };
+  var rotuloFiscal = { dedutivel:'pot. dedutível', nao_dedutivel:'prov. não dedutível', indeterminado:'fiscal indeterminado', parcial:'parcialmente dedutível' };
   function f(x){ return sym+' '+(parseFloat(x||0)||0).toFixed(2); }
 
   function render(dados){
@@ -63,13 +63,16 @@
     itens = dados.itens || [];
 
     // Despesa pessoal paga pela conta do negócio: listada, fora do saldo.
-    var inc=0, out=0, pes=0;
-    itens.forEach(function(i){ if(i.ty==='entrada') inc+=(+i.v||0); else if(i.ty==='pessoal') pes+=(+i.v||0); else out+=(+i.v||0); });
+    // Parcialmente dedutível (casa com escritório): valor integral, à parte —
+    // nem nas saídas do negócio nem nas pessoais; o contador define a parcela.
+    var inc=0, out=0, pes=0, par=0;
+    itens.forEach(function(i){ var v=(+i.v||0); if(i.ty==='entrada') inc+=v; else if(i.fi==='parcial') par+=v; else if(i.ty==='pessoal') pes+=v; else out+=v; });
     var periodo = '';
     if(dados.inicio) periodo = 'Período: <b>'+fmtData(dados.inicio)+'</b> a <b>'+(dados.fim?fmtData(dados.fim):'hoje')+'</b><br>';
     document.getElementById('meta').innerHTML = periodo +
       itens.length+' lançamentos · Entradas <b>'+f(inc)+'</b> · Saídas <b>'+f(out)+'</b> · Saldo <b>'+f(inc-out)+'</b>'
-      + (pes ? '<br>Despesas pessoais (fora do saldo): <b>'+f(pes)+'</b>' : '');
+      + (pes ? '<br>Despesas pessoais (fora do saldo): <b>'+f(pes)+'</b>' : '')
+      + (par ? '<br>Parcialmente dedutíveis (fora do saldo, o contador define a parcela): <b>'+f(par)+'</b>' : '');
 
     if(!itens.length){ document.getElementById('empty').style.display='block'; document.getElementById('tabela').innerHTML=''; return; }
     document.getElementById('empty').style.display='none';
@@ -78,18 +81,27 @@
     // para preencher o imposto. Colaboradores e pessoais em linhas à parte.
     var cats={}, colab=0, nColab=0;
     itens.forEach(function(i){
+      if(i.fi==='parcial'){ return; }
       if(i.ty==='despesa'){ var c=(i.c||'Outros'); cats[c]=cats[c]||{q:0,t:0}; cats[c].q++; cats[c].t+=(+i.v||0); }
       else if(i.ty==='colaborador'){ colab+=(+i.v||0); nColab++; }
     });
     var nomes=Object.keys(cats).sort(function(a,b){ return cats[b].t-cats[a].t; });
     var h = '';
-    if(nomes.length || colab || pes){
+    if(nomes.length || colab || pes || par){
       h += '<h3 style="margin:18px 0 8px;font-size:15px">Resumo por categoria</h3><table><thead><tr><th>Categoria</th><th style="text-align:right">Qtd.</th><th style="text-align:right">Total</th></tr></thead><tbody>';
       nomes.forEach(function(c){ h += '<tr><td>'+esc(c)+'</td><td style="text-align:right">'+cats[c].q+'</td><td class="v neg">'+f(cats[c].t)+'</td></tr>'; });
       if(colab) h += '<tr><td>Colaboradores</td><td style="text-align:right">'+nColab+'</td><td class="v neg">'+f(colab)+'</td></tr>';
       h += '<tr class="tot"><td colspan="2">TOTAL DE SAÍDAS DO NEGÓCIO</td><td class="v neg">'+f(out)+'</td></tr>';
       if(pes) h += '<tr><td colspan="2" style="color:#6b7280">Despesas pessoais (fora do saldo)</td><td class="v" style="color:#6b7280">'+f(pes)+'</td></tr>';
-      h += '</tbody></table><h3 style="margin:18px 0 8px;font-size:15px">Lançamentos</h3>';
+      h += '</tbody></table>';
+      var parciais = itens.filter(function(i){ return i.fi==='parcial'; });
+      if(parciais.length){
+        h += '<h3 style="margin:18px 0 4px;font-size:15px">Parcialmente dedutíveis</h3><div style="font-size:12px;color:#6b7280;margin-bottom:8px">Despesas da casa que podem ter uma parte do negócio (escritório em casa). Valor integral, fora das deduções — o contador define a parcela permitida.</div>';
+        h += '<table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor integral</th></tr></thead><tbody>';
+        parciais.forEach(function(i){ h += '<tr><td>'+esc(fmtData(i.dt))+'</td><td>'+esc(i.de||i.n||'—')+'</td><td>'+esc(i.c||'—')+'</td><td class="v">'+f(i.v)+'</td></tr>'; });
+        h += '<tr class="tot"><td colspan="3">TOTAL (VALOR INTEGRAL)</td><td class="v">'+f(par)+'</td></tr></tbody></table>';
+      }
+      h += '<h3 style="margin:18px 0 8px;font-size:15px">Lançamentos</h3>';
     }
     h += '<table><thead><tr><th>Data</th><th>Tipo</th><th>Nome</th><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th></tr></thead><tbody>';
     itens.forEach(function(i){
@@ -128,9 +140,11 @@
 
   function baixarCSV(){
     var cats={};
-    itens.forEach(function(i){ if(i.ty==='despesa'){ var c=(i.c||'Outros'); cats[c]=(cats[c]||0)+(+i.v||0); } });
+    var parc=0;
+    itens.forEach(function(i){ if(i.fi==='parcial'){ parc+=(+i.v||0); return; } if(i.ty==='despesa'){ var c=(i.c||'Outros'); cats[c]=(cats[c]||0)+(+i.v||0); } });
     var linhas = [['Resumo por categoria (despesas do negocio)','','','','','','Total ('+moeda+')']];
     Object.keys(cats).sort(function(a,b){ return cats[b]-cats[a]; }).forEach(function(c){ linhas.push([c,'','','','','',cats[c].toFixed(2)]); });
+    if(parc) linhas.push(['Parcialmente dedutiveis (valor integral, fora das deducoes; o contador define a parcela)','','','','','',parc.toFixed(2)]);
     linhas.push(['','','','','','','']);
     linhas.push(['Data','Tipo','Nome','Descricao','Categoria','Sugestao fiscal','Valor ('+moeda+')']);
     itens.forEach(function(i){

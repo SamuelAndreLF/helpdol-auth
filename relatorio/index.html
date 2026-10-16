@@ -42,6 +42,10 @@
         <div class="row"><span class="k">Pagamentos a colaboradores</span><span class="v neg" id="colab">—</span></div>
         <div class="row"><span class="k">Despesas dedutíveis (total)</span><span class="v neg" id="ded">—</span></div>
         <div class="liq"><span>Líquido</span><span id="liq">—</span></div>
+        <div id="parcBox" style="display:none;margin-top:14px;padding:10px 12px;border-radius:10px;background:#fef9c3;color:#713f12;font-size:13px;line-height:1.4">
+          <b>Parcialmente dedutíveis: <span id="parc">—</span></b><br>
+          Despesas da casa que podem ter uma parte do negócio (escritório em casa). Valor integral, fora das deduções acima — o contador define a parcela.
+        </div>
       </div>
       <div class="foot">Gerado pelo HelpDol · Resumo de apoio à declaração. Confira sempre com o seu contabilista.</div>
     </div>
@@ -67,6 +71,8 @@
   var liqEl = document.getElementById('liq');
   liqEl.textContent = f(liq);
   liqEl.className = liq >= 0 ? 'pos' : 'neg';
+  var parc = n(p.get('parc'));
+  if (parc > 0) { document.getElementById('parc').textContent = f(parc); document.getElementById('parcBox').style.display = 'block'; }
   window.HELPDOL_PDF_TARGET = '.card';
   window.HELPDOL_PDF_NAME = 'relatorio-irs-helpdol.pdf';
   window.HELPDOL_SHARE_TEXT = 'Relatório IRS HelpDol';
