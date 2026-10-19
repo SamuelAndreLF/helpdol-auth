@@ -21,6 +21,8 @@
   .pos { color: #16a34a; } .neg { color: #dc2626; }
   .tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px; }
   .tag.entrada { background:#dcfce7; color:#166534; } .tag.despesa { background:#fee2e2; color:#991b1b; } .tag.colaborador { background:#fef3c7; color:#92400e; } .tag.pessoal { background:#e5e7eb; color:#374151; }
+  /* A confirmar com o contador (despesa sem "pot. dedutível"): laranja. */
+  tr.conf td { background:#fff4e5; color:#b45309; } .tag.conf { background:#fed7aa; color:#9a3412; }
   tr.tot td { font-weight: 800; font-size: 14px; background: #f8fafc; border-top: 2px solid #16213e; }
   .empty { background:#fff; border-radius:14px; padding:30px; text-align:center; color:#6b7280; margin-top:16px; }
   .foot { text-align: center; color: #9ca3af; font-size: 11px; padding: 16px 0 4px; }
@@ -106,12 +108,13 @@
     h += '<table><thead><tr><th>Data</th><th>Tipo</th><th>Nome</th><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th></tr></thead><tbody>';
     itens.forEach(function(i){
       var ent = i.ty==='entrada';
-      h += '<tr>'
+      var conf = i.ty==='despesa' && i.fi!=='dedutivel' && i.fi!=='parcial';
+      h += '<tr'+(conf?' class="conf"':'')+'>'
         + '<td>'+esc(fmtData(i.dt))+'</td>'
         + '<td><span class="tag '+esc(i.ty)+'">'+esc(rotuloTipo[i.ty]||i.ty)+'</span></td>'
         + '<td>'+esc(i.n||'—')+'</td>'
         + '<td>'+esc(i.de||'—')+'</td>'
-        + '<td>'+esc(i.c||'—')+(i.fi?'<br><small style="color:#6b7280">'+esc(rotuloFiscal[i.fi]||i.fi)+'</small>':'')+'</td>'
+        + '<td>'+esc(i.c||'—')+(conf?'<br><span class="tag conf">a confirmar</span>':(i.fi?'<br><small style="color:#6b7280">'+esc(rotuloFiscal[i.fi]||i.fi)+'</small>':''))+'</td>'
         + '<td class="v '+(ent?'pos':'neg')+'">'+(ent?'+ ':'− ')+f(i.v)+'</td>'
         + '</tr>';
     });
