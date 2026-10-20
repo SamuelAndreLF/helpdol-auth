@@ -39,6 +39,10 @@
       font-size:13px; line-height:1.45; text-align:left;
     }
     .aviso-conta strong{ display:block; margin-bottom:2px; color:#5A3D0C; }
+    /* O que tem nesta conta: com várias contas cheias, só o e-mail não basta
+       para a pessoa reconhecer a certa (o Daniel tinha três, 20/10/2026). */
+    .resumo-conta{ background:#F3F4F6; border-radius:10px; padding:10px 12px; margin:-4px 0 14px; font-size:13px; line-height:1.5; text-align:left; color:#374151; }
+    .resumo-conta b{ color:#111827; }
 </style>
 </head>
 <body>
@@ -52,6 +56,7 @@
   <div id="chooser" class="hidden">
     <h2>Continuar conectado?</h2>
     <div class="userinfo" id="chooserEmail"></div>
+    <div class="resumo-conta hidden" id="chooserResumo"></div>
     <button class="btn-primary" onclick="continuarConta()">Continuar</button>
     <button class="btn-secondary" onclick="trocarConta()">Entrar com outra conta</button>
   </div>
@@ -115,6 +120,7 @@
   <div id="consent" class="hidden">
     <h2 id="titulo">Autorizar acesso?</h2>
     <div class="userinfo" id="usuario"></div>
+    <div class="resumo-conta hidden" id="consentResumo"></div>
     <div class="scopes">
       <b id="clientName">O aplicativo</b> poderá:
       <ul>
@@ -161,6 +167,7 @@ async function iniciar() {
     return
   }
   el('chooserEmail').textContent = descreverConta(session)
+  mostrarResumo('chooserResumo')
   mostrar('chooser')
 }
 
@@ -171,6 +178,25 @@ function descreverConta(session) {
   const p = (u.app_metadata && u.app_metadata.provider) || 'email'
   const nome = p === 'google' ? 'Google' : p === 'apple' ? 'Apple' : 'E-mail'
   return nome + ' · ' + (u.email || '')
+}
+
+// Mostra o que tem nesta conta (bancos e lançamentos), para a pessoa
+// reconhecer se é a mesma do app. Falhar aqui não atrapalha a conexão.
+async function mostrarResumo(id) {
+  try {
+    const [b, e, d] = await Promise.all([
+      supabase.from('bank_connections').select('institution_name, last4').eq('status', 'active'),
+      supabase.from('entradas').select('id', { count: 'exact', head: true }),
+      supabase.from('despesas').select('id', { count: 'exact', head: true }),
+    ])
+    const bancos = (b.data || []).map(x => (x.institution_name || 'Banco') + (x.last4 ? ' ••' + x.last4 : ''))
+    const total = (e.count || 0) + (d.count || 0)
+    const partes = []
+    partes.push(bancos.length ? '<b>Bancos:</b> ' + bancos.join(', ') : '<b>Nenhum banco conectado</b>')
+    partes.push('<b>' + total.toLocaleString('pt-BR') + '</b> lançamentos')
+    el(id).innerHTML = 'Nesta conta: ' + partes.join(' · ') + '<br>É a mesma conta que você usa no app? Se não for, toque em <b>Entrar com outra conta</b>.'
+    el(id).classList.remove('hidden')
+  } catch (_) { /* segue sem o resumo */ }
 }
 
 // Criada neste mesmo login (Supabase cria a conta no primeiro OAuth).
@@ -196,6 +222,7 @@ async function carregarConsent(session) {
     el('clientName').textContent = nome
     el('titulo').textContent = 'Autorizar ' + nome + '?'
     el('usuario').textContent = 'Conectando a conta ' + descreverConta(session)
+    mostrarResumo('consentResumo')
     mostrar('consent')
   } catch (e) {
     mostrarErro('Não foi possível carregar a autorização: ' + (e.message || e))
