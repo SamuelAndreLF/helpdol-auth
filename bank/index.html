@@ -130,7 +130,16 @@
     stripe.collectFinancialConnectionsAccounts({ clientSecret: cs }).then(function(res){
       clearTimeout(salvarei);
       esperando(false);
-      if(res.error){ showErr(res.error.message || t.erro); mostrarBotao(t.retry); return; }
+      if(res.error){
+        // Banco com app próprio (Wells Fargo, BofA): a pessoa vai ao app do
+        // banco, autoriza, e o Safari recarrega esta página. A sessão já foi
+        // usada e o Stripe responde "client_secret has expired" — mas as
+        // contas JÁ estão ligadas. Mostrar erro mandava a pessoa repetir tudo
+        // (tio, 03/11/2026). Volta para o app, que confere com o -link e só
+        // avisa sucesso se houver conta de verdade.
+        if(/expired|already|used|completed|consumed/i.test(res.error.message || '')){ done(); return; }
+        showErr(res.error.message || t.erro); mostrarBotao(t.retry); return;
+      }
       var s = res.financialConnectionsSession;
       if(s && s.accounts && s.accounts.length){ done(); }
       else { showErr(t.nenhuma); mostrarBotao(t.btn); }
