@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HelpDol</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:#0D0D0D; color:#ECECEC; display:flex; min-height:100vh; align-items:center; justify-content:center; padding:24px; }
+  .card { width:100%; max-width:420px; background:#1C1C1C; border:1px solid #343434; border-radius:20px; padding:32px 24px; text-align:center; }
+  .logo { width:64px; height:64px; border-radius:18px; margin:0 auto 18px; background:#2A2A2A; border:1px solid #343434;
+    display:flex; align-items:center; justify-content:center; font-size:30px; }
+  h1 { font-size:20px; margin:0 0 8px; }
+  p { color:#9B9B9B; font-size:15px; line-height:1.5; margin:0 0 24px; }
+  a.btn { display:block; border-radius:14px; padding:16px; font-size:16px; font-weight:600; text-decoration:none;
+    background:#ECECEC; color:#0D0D0D; }
+</style>
+</head>
+<body>
+  <!-- Para onde a Stripe manda a pessoa ao terminar o cadastro de receber no cartao (return_url do helpdol-pay-account). A pagina nao existia e a pessoa via um 404 depois de um cadastro que tinha dado certo (Daniel, 03/11/2026). -->
+  <div class="card">
+    <div class="logo">💳</div>
+    <h1 id="ttl"></h1>
+    <p id="sub"></p>
+    <a class="btn" id="voltar" href="logify://pagamento"></a>
+  </div>
+<script>
+  var L = {"pt": {"ttl": "Cadastro enviado ✅", "sub": "Seus dados foram para a Stripe. Voltando para o HelpDol para receber no cartão…", "btn": "Voltar para o HelpDol"}, "en": {"ttl": "Setup sent ✅", "sub": "Your details went to Stripe. Going back to HelpDol to take card payments…", "btn": "Back to HelpDol"}, "es": {"ttl": "Registro enviado ✅", "sub": "Tus datos fueron a Stripe. Volviendo a HelpDol para cobrar con tarjeta…", "btn": "Volver a HelpDol"}};
+  var lang = (new URLSearchParams(location.search).get('lang') || navigator.language || 'pt').slice(0,2).toLowerCase();
+  var t = L[lang] || L.pt;
+  document.documentElement.lang = L[lang] ? lang : 'pt';
+  document.getElementById('ttl').textContent = t.ttl;
+  document.getElementById('sub').textContent = t.sub;
+  document.getElementById('voltar').textContent = t.btn;
+  setTimeout(function(){ location.href = 'logify://pagamento'; }, 1500);
+</script>
+</body>
+</html>
